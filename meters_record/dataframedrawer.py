@@ -1,8 +1,8 @@
 from pathlib import Path
 from typing import Union
 import matplotlib.pyplot as plt
-from deepclustering.decorator import threaded
-from deepclustering.meters import MeterInterface
+from deepclustering2.decorator import threaded
+from deepclustering2.meters2 import MeterInterface
 
 from meters_record.dataframedrawerhelper import plot_callback, _repositioning_axes, multipleline_plot
 
