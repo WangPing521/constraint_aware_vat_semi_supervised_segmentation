@@ -62,7 +62,7 @@ class BaseTrainer(_Trainer):
         self._entropy_criterion = Entropy()
         self._jsd_criterion = JSD_div()
         self.report_constriant = Report_reward(Fscale=5, Cscale=3, run_state='val')
-        self._cons_weight = self._config['cons_weight']
+        self._cons_weight = self._config['Constraints']['cons_weight']
 
     def register_meters(self, enable_drawer=True) -> None:
         super(BaseTrainer, self).register_meters()
@@ -160,7 +160,7 @@ class BaseTrainer(_Trainer):
             self._meter_interface['sup_loss'].add(sup_loss.item())
             if self._config['Trainer'].get('name') == 'consVat':
                 self._meter_interface['lds'].add(reg_loss.item())
-                if self._config['Reg_cons']:
+                if self._config['Constraints']['Reg_cons']:
                     self._meter_interface['rein_loss'].add(rein_cons.item())
 
             if ((batch_id + 1) % 5) == 0:

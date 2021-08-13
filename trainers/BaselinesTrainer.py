@@ -76,7 +76,7 @@ class BaselinesTrainer(BaseTrainer):
         if self._config["MinEntropy"]:
             semi_loss = self._entropy_criterion(unlab_preds)
 
-        if self._config["Reg_cons"]:
+        if self._config['Constraints']["Reg_cons"]:
             semi_loss = self.reinforce_cons_loss(unlab_preds)
             C_reward = self.report_constriant(unlab_preds, utarget)
 

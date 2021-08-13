@@ -38,7 +38,7 @@ class MeanTeacherTrainer(BaseTrainer):
                              num_batches,
                              *args,
                              **kwargs)
-        self.weight = self._config['cons_weight']
+        self.weight = self._config['Constraints']['cons_weight']
         self._ce_criterion = SimplexCrossEntropyLoss()
 
     def _run_step(self, lab_data, unlab_data):

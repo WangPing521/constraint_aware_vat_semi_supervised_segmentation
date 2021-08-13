@@ -12,7 +12,7 @@ from ensemble_functions.utils.non_diff_cons import reinforce_cons_loss
 class generateAD(nn.Module):
     def __init__(
             self, xi=10.0, eps=1.0, prop_eps=0.25, ip=1, consweight=0.5, distance_func=KL_div(),
-            temp=1, Fscale=5, Cscale=3, norm_way='L2', reward_type='binary'
+            temp=1, Fscale=5, Cscale=3, norm_way='L2', reward_type='binary', rein_baseline=False
     ):
         super(generateAD, self).__init__()
         self.xi = xi
@@ -20,7 +20,7 @@ class generateAD(nn.Module):
         self.ip = ip
         self.prop_eps = prop_eps
         self.distance_func = distance_func
-        self.reinforce_cons_loss = reinforce_cons_loss(Fscale=Fscale, Cscale=Cscale, run_state='train', reward_type=reward_type)
+        self.reinforce_cons_loss = reinforce_cons_loss(Fscale=Fscale, Cscale=Cscale, run_state='train', reward_type=reward_type, rein_baseline=rein_baseline)
         self.consweight = consweight
         self.temp = temp
         self.norm_way = norm_way

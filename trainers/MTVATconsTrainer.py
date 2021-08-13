@@ -40,11 +40,13 @@ class ConstraintMTVATTrainer(BaseTrainer):
                              num_batches,
                              *args,
                              **kwargs)
-        self.weight = self._config['cons_weight']
+        self.weight = self._config['Constraints']['cons_weight']
+        self.credit_type = self._config['Constraints']['Credit_type']
+        self.rein_base = self._config['Constraints']['Rein_base']
         self._ce_criterion = SimplexCrossEntropyLoss()
-        self.adexample = generateAD(eps=self._config['VATeps'], consweight=self._config['cons_weight'], temp=self._config['Temperature'],
-                                    norm_way='L2', reward_type=self._config['Credit_type'])
-        self.reinforce_cons_loss = reinforce_cons_loss(run_state='train', reward_type=self._config['Credit_type'])
+        self.adexample = generateAD(eps=self._config['VATeps'], consweight=self.weight, temp=self._config['Temperature'],
+                                    norm_way='L2', reward_type=self.credit_type, rein_baseline=self.rein_base)
+        self.reinforce_cons_loss = reinforce_cons_loss(run_state='train', reward_type=self.credit_type, rein_baseline=self.rein_base)
 
     def _run_step(self, lab_data, unlab_data):
 
@@ -83,7 +85,7 @@ class ConstraintMTVATTrainer(BaseTrainer):
         unlab_predS = self._model[0](uimage_ad).softmax(1)
 
         cons_S = 0
-        if self._config["Reg_cons"]:
+        if self._config['Constraints']["Reg_cons"]:
             cons_S = self.reinforce_cons_loss(unlab_predS)
 
         sup_loss = self._ce_criterion(lab_preds, onehot_target)

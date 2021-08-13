@@ -199,19 +199,23 @@ class Report_reward(nn.Module):
 
 # reinforced constraint loss
 class reinforce_cons_loss(nn.Module):
-    def __init__(self, num_sample=10, Fscale=5, Cscale=3, run_state='train', reward_type='binary'):
+    def __init__(self, num_sample=10, Fscale=5, Cscale=3, run_state='train', reward_type='binary', rein_baseline=False):
         super().__init__()
         self._num = num_sample
         self._Fscale = Fscale
         self._Cscale = Cscale
         self._run_state = run_state
         self._reward_type = reward_type
+        self.rein_baseline = rein_baseline
 
     def forward(self, prob: Tensor, **kwargs) -> Tensor:
         probs, samples = prob_sample(prob)
         fg_num = prob.shape[1]  # fg_num: the number of classes
         C_rewards = cons_rewards(samples, fg_num, self._Fscale, self._Cscale, self._run_state, self._reward_type)
         assert probs.shape == C_rewards.shape
-        avg_reward = ((1 / C_rewards.shape[1]) * C_rewards.sum(dim=1)).unsqueeze(1)
-        cons_loss = (- (C_rewards - avg_reward) * torch.log(probs + 1e-6)).mean()
+        if self.rein_baseline:
+            avg_reward = ((1 / C_rewards.shape[1]) * C_rewards.sum(dim=1)).unsqueeze(1)
+            cons_loss = (- (C_rewards - avg_reward) * torch.log(probs + 1e-6)).mean()
+        else:
+            cons_loss = (- C_rewards * torch.log(probs + 1e-6)).mean()
         return cons_loss

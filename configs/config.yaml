@@ -34,6 +34,7 @@ RegScheduler:
   max_epoch: 50
   min_value: 0.0
   max_value: 0.00001
+
 AlphaScheduler:
   begin_epoch: 5
   max_epoch: 50
@@ -58,18 +59,23 @@ num_models: 2
 
 MinEntropy: False
 
-Credit_type: binary # binary, discretecontinue
-VATeps: 2
-num_samples: 10
-Constraint: True
-VAT_base: True
-Reg_cons: True
-cons_weight: 0.001
+Constraints:
+  Credit_type: binary # binary, discrete
+  num_samples: 10
+  Constraint: True  # vat_constraint
+  Reg_cons: True  # constraint loss
+  VAT_base: True  # vat
+  Rein_base: False # reinforce with baseline
+  cons_weight: 0.001
+
 Kernel:
   flood_fill: 5
   local_conn: 3
-Temperature: 1
+
 Norm_style: L2  # L1, L2
+VATeps: 2
+
+Temperature: 1
 Transform_option: rotate
 
 seed: 1234567
