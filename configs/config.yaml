@@ -1,0 +1,75 @@
+Arch:
+  name: enet
+  input_dim: 1
+  num_classes: 2  # 2, 3, 4
+
+Optim:
+  name: RAdam
+  lr: 0.00001
+
+Scheduler:
+  name: CosineAnnealingLR
+  T_max: 90
+  warmup:
+    multiplier: 300
+    total_epoch: 10
+
+Dataset: spleen # acdc, prostate, spleen, prostateDK
+Foreground: all # LV, Myo, RV, all
+
+Data:
+  unlabeled_data_ratio: 0.95
+  labeled_data_ratio: 0.05
+  seed: 1
+
+DataLoader:
+  labeled_batch_size: 4
+  unlabeled_batch_size: 4
+  val_batch_size: 6
+  shuffle: True
+  num_workers: 0
+
+RegScheduler:
+  begin_epoch: 5
+  max_epoch: 50
+  min_value: 0.0
+  max_value: 0.00001
+AlphaScheduler:
+  begin_epoch: 5
+  max_epoch: 50
+  min_value: 0.0
+  max_value: 0.5
+
+SelfPaceScheduler:
+  begin_epoch: 5
+  max_epoch: 50
+  min_value: 0.2
+  max_value: 6
+
+Trainer:
+  name: consVat  # Baselines, consVat, consTransform, co_training, MeanTeacher, MTconsvat, cotconsVAT
+  device: cuda
+  save_dir: runs
+  num_batches: 200
+  max_epoch: 100  # 50, 100
+  checkpoint_path: runs
+
+num_models: 2
+
+MinEntropy: False
+
+Credit_type: binary # binary, discretecontinue
+VATeps: 2
+num_samples: 10
+Constraint: True
+VAT_base: True
+Reg_cons: True
+cons_weight: 0.001
+Kernel:
+  flood_fill: 5
+  local_conn: 3
+Temperature: 1
+Norm_style: L2  # L1, L2
+Transform_option: rotate
+
+seed: 1234567
