@@ -7,7 +7,7 @@ CC_wrapper(){
     command=$3
     mem=$4
     module load python/3.6
-    source $HOME/torchenv36/bin/activate
+    source $HOME/torchenv37/bin/activate
     module load scipy-stack
 	module load cmake
     echo ${command} > tmp.sh
