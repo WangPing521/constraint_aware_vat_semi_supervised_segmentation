@@ -7,7 +7,7 @@ from torch import Tensor
 
 from ensemble_functions.utils.independent_functions import average_list
 
-device = 'cpu'
+device = 'cuda'
 
 
 # samples and probability map
