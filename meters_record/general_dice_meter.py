@@ -4,7 +4,8 @@ from torch import Tensor
 from collections.abc import Iterable
 import numpy as np
 
-from ensemble_functions.utils.independent_functions import to_float, one_hot, simplex, class2one_hot, probs2one_hot
+from ensemble_functions.utils.independent_functions import to_float, one_hot, simplex, class2one_hot, probs2one_hot, \
+    average_iter
 from meters_record._metric import _Metric
 
 
@@ -108,7 +109,9 @@ class UniversalDice(_Metric):
 
     def summary(self) -> dict:
         means, stds = self.value()
-        return {f"DSC{i}": to_float(means[i]) for i in self._report_axis}
+        report_dict = {f"DSC{i}": to_float(means[i]) for i in self._report_axis}
+        report_dict.update({"DSC_mean": average_iter(report_dict.values())})
+        return report_dict
 
     def detailed_summary(self) -> dict:
         means, stds = self.value()

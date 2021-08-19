@@ -307,6 +307,10 @@ def average_list(input_list):
     return sum(input_list) / len(input_list)
 
 
+def average_iter(a_list):
+    return sum(a_list) / float(len(a_list))
+
+
 def id_(x):
     return x
 
