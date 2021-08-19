@@ -1,6 +1,6 @@
 import PIL
 
-from deepclustering.augment import pil_augment, SequentialWrapper
+from deepclustering2.augment import pil_augment, SequentialWrapper
 
 image_transform = pil_augment.Compose(
     [
