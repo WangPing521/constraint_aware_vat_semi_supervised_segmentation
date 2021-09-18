@@ -17,6 +17,7 @@ dictitems:
     Reg_cons: true
     Rein_base: false
     VAT_base: true
+    cons_connectivity: 1
     cons_weight: 0.001
     num_samples: 10
   Data:

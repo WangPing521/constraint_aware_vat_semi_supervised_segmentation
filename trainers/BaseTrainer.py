@@ -61,7 +61,7 @@ class BaseTrainer(_Trainer):
         self.checkpoint_path = checkpoint_path
         self._entropy_criterion = Entropy()
         self._jsd_criterion = JSD_div()
-        self.report_constriant = Report_reward(Fscale=5, Cscale=3, run_state='val')
+        self.report_constriant = Report_reward(Fscale=5, Cscale=3, run_state='val', my_connectivity=self._config['Constraints'].get('cons_connectivity'))
         self._cons_weight = self._config['Constraints']['cons_weight']
 
     def register_meters(self, enable_drawer=True) -> None:
@@ -93,6 +93,9 @@ class BaseTrainer(_Trainer):
             "weight", AverageValueMeter(), group_name="train"
         )
         # validation
+        self._meter_interface.register_new_meter(
+            f"val_mean_reward", AverageValueMeter(), group_name="val"
+        )
         for i in range(self._config['Arch']['num_classes']-1):
             self._meter_interface.register_new_meter(
                 f"val_c{i}reward", AverageValueMeter(), group_name="val"
@@ -240,6 +243,8 @@ class BaseTrainer(_Trainer):
             if ((batch_id + 1) % 5) == 0:
                 report_statue = self._meter_interface.tracking_status("val")
                 val_indicator.set_postfix(flatten_dict(report_statue))
+
+        self._meter_interface[f'val_mean_reward'].add(sum((avg_c_reward/count))/avg_c_reward.shape[0])
 
         for i in range(self._config['Arch']['num_classes']-1):
             self._meter_interface[f'val_c{i}reward'].add((avg_c_reward[i] / count).cpu())

@@ -12,7 +12,7 @@ from ensemble_functions.utils.non_diff_cons import reinforce_cons_loss
 class consVATLoss(nn.Module):
     def __init__(
         self, xi=10.0, eps=1.0, prop_eps=0.25, ip=1, consweight=0.5, constraint=False, vat_base=True, reg_constraint=False, distance_func=KL_div(), temp=1,
-            Fscale=5, Cscale=3, norm_way='L2', reward_type='binary', rein_baseline=False
+            Fscale=5, Cscale=3, norm_way='L2', reward_type='binary', rein_baseline=False, my_connectivity=None
     ):
         """VAT loss
         :param xi: hyperparameter of VAT (default: 10.0)
@@ -25,7 +25,7 @@ class consVATLoss(nn.Module):
         self.ip = ip
         self.prop_eps = prop_eps
         self.distance_func = distance_func
-        self.reinforce_cons_loss = reinforce_cons_loss(Fscale=Fscale, Cscale=Cscale, run_state='train', reward_type=reward_type, rein_baseline=rein_baseline)
+        self.reinforce_cons_loss = reinforce_cons_loss(Fscale=Fscale, Cscale=Cscale, run_state='train', reward_type=reward_type, rein_baseline=rein_baseline, my_connectivity=my_connectivity)
         self.constraint = constraint
         self.vat_base = vat_base
         self.reg_constraint = reg_constraint

@@ -54,7 +54,7 @@ def prob_sample(preds: Tensor):
 
 
 # rewards
-def cons_rewards(samples, fg_num, Fscale, Cscale, run_state='train', reward_type='binary'):
+def cons_rewards(samples, fg_num, Fscale, Cscale, run_state='train', reward_type='binary', my_connectivity=None):
     kernel = torch.ones(1, 1, Fscale, Fscale)
     kernel = torch.FloatTensor(kernel)
     weight = nn.Parameter(data=kernel, requires_grad=False).to(device)
@@ -80,13 +80,15 @@ def cons_rewards(samples, fg_num, Fscale, Cscale, run_state='train', reward_type
                         fill_connect = torch.Tensor(flood_fill(fg[per_s].cpu().numpy(),
                                                                (m[per_s][0][max_index].cpu().numpy(),
                                                                 m[per_s][1][max_index].cpu().numpy()),
-                                                               (fg_neighbors.max() + 1).cpu().numpy())).unsqueeze(
+                                                               (fg_neighbors.max() + 1).cpu().numpy(),
+                                                               connectivity=None if my_connectivity =='None' else my_connectivity)).unsqueeze(
                             0).unsqueeze(0)
                     else:
                         fill_connect_img = torch.Tensor(flood_fill(fg[per_s].cpu().numpy(),
                                                                    (m[per_s][0][max_index].cpu().numpy(),
                                                                     m[per_s][1][max_index].cpu().numpy()),
-                                                                   (fg_neighbors.max() + 1).cpu().numpy()))
+                                                                   (fg_neighbors.max() + 1).cpu().numpy(),
+                                                                   connectivity=None if my_connectivity =='None' else my_connectivity))
                         fill_connect = torch.cat([fill_connect, fill_connect_img.unsqueeze(0).unsqueeze(0)], dim=1)
 
                 fill_connect = torch.where(fill_connect.to(device) == fg_neighbors.max() + 1,
@@ -107,6 +109,17 @@ def cons_rewards(samples, fg_num, Fscale, Cscale, run_state='train', reward_type
                                            S_fg_neigbors.float())
                 if reward_type == 'binary':
                     per_c_rewards = (fc_nonzerobg == sc_nonzerobg).float().transpose(1, 0)
+                elif reward_type == "discretecontinuous":
+                    S_fg_neigbors1 = torch.where(S_fg_neigbors.float() == 0, torch.Tensor([1]).to(device),
+                                S_fg_neigbors.float())
+                    per_c_rewards = (F_fg_neigbors / S_fg_neigbors1).transpose(1,0)
+                elif reward_type == 'center_area':  # high reward for center pixel
+                    reward_temp = (fc_nonzerobg == sc_nonzerobg).float().transpose(1, 0)
+                    per_c_rewards = F_fg_neigbors.transpose(1, 0) * reward_temp
+                elif reward_type == 'boundary_line':  # high reward for boundary
+                    reward_temp = (fc_nonzerobg == sc_nonzerobg).float().transpose(1, 0)
+                    per_c_rewards_reverse = patch_weight.sum() - F_fg_neigbors
+                    per_c_rewards = per_c_rewards_reverse.transpose(1, 0) * reward_temp
                 else:
                     f_conn_pixels_num = torch.Tensor([fill_connect[i].sum() for i in range(fill_connect.shape[0])]).to(
                         device)
@@ -162,11 +175,12 @@ def val_prediction(prob: Tensor, target: Tensor):
 
 
 class Report_reward(nn.Module):
-    def __init__(self, Fscale=5, Cscale=3, run_state='val'):
+    def __init__(self, Fscale=5, Cscale=3, run_state='val', my_connectivity=None):
         super().__init__()
         self.Fscale = Fscale
         self.Cscale = Cscale
         self._run_state = run_state
+        self._my_connectivity = my_connectivity
 
     def forward(self, prob: Tensor, target: Tensor, **kwargs) -> Tensor:
         sample_imgs = val_prediction(prob, target)
@@ -175,7 +189,7 @@ class Report_reward(nn.Module):
         else:
             fg_num = prob.shape[1]  # fg_num: the number of classes
             C_rewards = cons_rewards(sample_imgs.transpose(1, 0), fg_num, Fscale=self.Fscale, Cscale=self.Cscale,
-                                     run_state=self._run_state)
+                                     run_state=self._run_state, my_connectivity=self._my_connectivity)
 
             avgc_reward_list = []
             for i in range(sample_imgs.shape[1]):
@@ -199,7 +213,7 @@ class Report_reward(nn.Module):
 
 # reinforced constraint loss
 class reinforce_cons_loss(nn.Module):
-    def __init__(self, num_sample=10, Fscale=5, Cscale=3, run_state='train', reward_type='binary', rein_baseline=False):
+    def __init__(self, num_sample=10, Fscale=5, Cscale=3, run_state='train', reward_type='binary', rein_baseline=False, my_connectivity=None):
         super().__init__()
         self._num = num_sample
         self._Fscale = Fscale
@@ -207,11 +221,12 @@ class reinforce_cons_loss(nn.Module):
         self._run_state = run_state
         self._reward_type = reward_type
         self.rein_baseline = rein_baseline
+        self._my_connectivity = my_connectivity
 
     def forward(self, prob: Tensor, **kwargs) -> Tensor:
         probs, samples = prob_sample(prob)
         fg_num = prob.shape[1]  # fg_num: the number of classes
-        C_rewards = cons_rewards(samples, fg_num, self._Fscale, self._Cscale, self._run_state, self._reward_type)
+        C_rewards = cons_rewards(samples, fg_num, self._Fscale, self._Cscale, self._run_state, self._reward_type, self._my_connectivity)
         assert probs.shape == C_rewards.shape
         if self.rein_baseline:
             avg_reward = ((1 / C_rewards.shape[1]) * C_rewards.sum(dim=1)).unsqueeze(1)

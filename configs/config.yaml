@@ -67,6 +67,7 @@ Constraints:
   VAT_base: True  # vat
   Rein_base: False # reinforce with baseline
   cons_weight: 0.001
+  cons_connectivity: 1
 
 Kernel:
   flood_fill: 5

@@ -44,11 +44,13 @@ class ConstraintVATTrainer(BaseTrainer):
         self.reg_constraint = self._config['Constraints']['Reg_cons']
         self.rein_base = self._config['Constraints']['Rein_base']
         self.credit_type = self._config['Constraints']['Credit_type']
+        self.cons_connectivity = self._config['Constraints']['cons_connectivity']
         self._ce_criterion = SimplexCrossEntropyLoss()
         self.cons_vatloss = consVATLoss(eps=self._config['VATeps'], consweight=self.weight, constraint=self.constraint, vat_base=self.vat_base,
                                         reg_constraint=self.reg_constraint, temp=self._config['Temperature'], Fscale=self._config['Kernel']['flood_fill'],
                                         Cscale=self._config['Kernel']['local_conn'],
-                                        norm_way=self._config['Norm_style'], reward_type=self.credit_type, rein_baseline=self.rein_base)
+                                        norm_way=self._config['Norm_style'], reward_type=self.credit_type, rein_baseline=self.rein_base,
+                                        my_connectivity=self.cons_connectivity)
 
     def _run_step(self, lab_data, unlab_data):
 
