@@ -10,13 +10,13 @@ dictitems:
   Arch:
     input_dim: 1
     name: enet
-    num_classes: 4
+    num_classes: 2
+  Constraint: convexity
   Constraints:
-    Constraint: true
     Credit_type: binary
     Reg_cons: true
     Rein_base: false
-    VAT_base: true
+    VAT_base: false
     cons_connectivity: 1
     cons_weight: 0.001
     num_samples: 10
@@ -31,7 +31,7 @@ dictitems:
     unlabeled_batch_size: 4
     val_batch_size: 6
   Dataset: acdc
-  Foreground: all
+  Foreground: LV
   Kernel:
     flood_fill: 5
     local_conn: 3
@@ -61,10 +61,11 @@ dictitems:
     checkpoint_path: runs
     device: cpu
     max_epoch: 100
-    name: consVat
+    name: convextrainer
     num_batches: 200
     save_dir: runs
   Transform_option: rotate
-  VATeps: 2
-  num_models: 2
+  VATeps: 0.0001
+  lvconvexity:
+    Convex_types: defects
   seed: 1234567

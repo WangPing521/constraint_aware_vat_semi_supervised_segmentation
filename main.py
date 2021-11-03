@@ -12,6 +12,8 @@ from ensemble_functions.utils.independent_functions import fix_all_seed, get_gro
 from trainers.BaselinesTrainer import BaselinesTrainer
 from trainers.ConstraintCotVATTrainer import ConstraintCotVATTrainer
 from trainers.ConstraintVATTrainer import ConstraintVATTrainer
+from trainers.ConsvexityTrainer import ConvexityTrainer
+from trainers.ConsvexityVATTrainer import ConvexityVATTrainer
 from trainers.MTTrainer import MeanTeacherTrainer
 from trainers.MTVATconsTrainer import ConstraintMTVATTrainer
 from trainers.cotrainingTrainer import CotrainingTrainer
@@ -21,7 +23,7 @@ fix_all_seed(config['seed'])
 
 # model setting
 model1 = Model(config["Arch"], config["Optim"], config["Scheduler"])
-if config["Trainer"]["name"] == "Baselines" or config["Trainer"]["name"] == "consVat":
+if config["Trainer"]["name"] in["Baselines", "consVat", 'convextrainer', 'convexVATtrainer']:
     model = ModelList([model1])
 elif config["Trainer"]["name"] == "co_training" or config["Trainer"]["name"] == "cotconsVAT":
     model2 = Model(config["Arch"], config["Optim"], config["Scheduler"])
@@ -78,7 +80,9 @@ Trainer_container = {
     "cotconsVAT": ConstraintCotVATTrainer,
     "MeanTeacher": MeanTeacherTrainer,
     "MTconsvat": ConstraintMTVATTrainer,
-    "consVat": ConstraintVATTrainer
+    "consVat": ConstraintVATTrainer,
+    "convexVATtrainer": ConvexityVATTrainer,
+    "convextrainer": ConvexityTrainer
 }
 trainer_name = Trainer_container.get(config['Trainer'].get('name'))
 trainer = trainer_name(

@@ -109,7 +109,7 @@ def cons_rewards(samples, fg_num, Fscale, Cscale, run_state='train', reward_type
                                            S_fg_neigbors.float())
                 if reward_type == 'binary':
                     per_c_rewards = (fc_nonzerobg == sc_nonzerobg).float().transpose(1, 0)
-                elif reward_type == "discretecontinuous":
+                elif reward_type == 'discretecontinuous':
                     S_fg_neigbors1 = torch.where(S_fg_neigbors.float() == 0, torch.Tensor([1]).to(device),
                                 S_fg_neigbors.float())
                     per_c_rewards = (F_fg_neigbors / S_fg_neigbors1).transpose(1,0)
@@ -234,3 +234,6 @@ class reinforce_cons_loss(nn.Module):
         else:
             cons_loss = (- C_rewards * torch.log(probs + 1e-6)).mean()
         return cons_loss
+
+
+

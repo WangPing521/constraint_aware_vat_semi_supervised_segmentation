@@ -1,7 +1,7 @@
 Arch:
   name: enet
   input_dim: 1
-  num_classes: 4  # 2, 3, 4
+  num_classes: 2  # 2, 3, 4
 
 Optim:
   name: RAdam
@@ -15,7 +15,7 @@ Scheduler:
     total_epoch: 10
 
 Dataset: acdc # acdc, prostate, spleen, prostateDK
-Foreground: all # LV, Myo, RV, all
+Foreground: LV # LV, Myo, RV, all
 
 Data:
   unlabeled_data_ratio: 0.95
@@ -28,6 +28,14 @@ DataLoader:
   val_batch_size: 6
   shuffle: True
   num_workers: 0
+
+Trainer:
+  name: convexVATtrainer  # Baselines, consVat, consTransform, co_training, MeanTeacher, MTconsvat, cotconsVAT, convextrainer, convexVATtrainer
+  device: cpu
+  save_dir: runs
+  num_batches: 200
+  max_epoch: 100  # 50, 100
+  checkpoint_path: runs
 
 RegScheduler:
   begin_epoch: 5
@@ -47,34 +55,27 @@ SelfPaceScheduler:
   min_value: 0.2
   max_value: 6
 
-Trainer:
-  name: consVat  # Baselines, consVat, consTransform, co_training, MeanTeacher, MTconsvat, cotconsVAT
-  device: cuda
-  save_dir: runs
-  num_batches: 200
-  max_epoch: 100  # 50, 100
-  checkpoint_path: runs
-
-num_models: 2
-
 MinEntropy: False
+Constraint: convexity  # connectivity, convexity
 
 Constraints:
   Credit_type: binary # binary, discrete
   num_samples: 10
-  Constraint: True  # vat_constraint
   Reg_cons: True  # constraint loss
-  VAT_base: True  # vat
+  VAT_base: False  # vat
   Rein_base: False # reinforce with baseline
   cons_weight: 0.001
   cons_connectivity: 1
+
+lvconvexity:
+  Convex_types: defects # hullR, defects, pseudoFG, pseudoBG, reverseFGBG
 
 Kernel:
   flood_fill: 5
   local_conn: 3
 
 Norm_style: L2  # L1, L2
-VATeps: 2
+VATeps: 0.0001
 
 Temperature: 1
 Transform_option: rotate

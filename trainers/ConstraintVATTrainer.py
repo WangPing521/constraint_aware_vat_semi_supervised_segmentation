@@ -38,7 +38,7 @@ class ConstraintVATTrainer(BaseTrainer):
                              num_batches,
                              *args,
                              **kwargs)
-        self.constraint = self._config['Constraints']['Constraint']
+        self.constraint = self._config['Constraint']
         self.weight = self._config['Constraints']['cons_weight']
         self.vat_base = self._config['Constraints']['VAT_base']
         self.reg_constraint = self._config['Constraints']['Reg_cons']
