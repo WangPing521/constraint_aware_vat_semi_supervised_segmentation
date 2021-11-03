@@ -158,7 +158,7 @@ class BaseTrainer(_Trainer):
 
             self._meter_interface['total_loss'].add(loss.item())
             self._meter_interface['sup_loss'].add(sup_loss.item())
-            if self._config['Constraint']['VAT_base']:
+            if self._config['Constraints']['VAT_base']:
                 self._meter_interface['lds'].add(reg_loss.item())
             if self._config['Constraints']['Reg_cons']:
                 self._meter_interface['rein_loss'].add(rein_cons.item())
