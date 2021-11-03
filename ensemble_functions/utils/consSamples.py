@@ -1,7 +1,7 @@
 from torch import Tensor
 import torch
 
-device='cpu'
+device='cuda'
 def prob_sample(preds: Tensor, cons_types="convex_hull"):
     # multinomial sampling
     n, c, h, w = preds.shape

@@ -31,7 +31,7 @@ DataLoader:
 
 Trainer:
   name: convexVATtrainer  # Baselines, consVat, consTransform, co_training, MeanTeacher, MTconsvat, cotconsVAT, convextrainer, convexVATtrainer
-  device: cpu
+  device: cuda
   save_dir: runs
   num_batches: 200
   max_epoch: 100  # 50, 100
@@ -56,19 +56,19 @@ SelfPaceScheduler:
   max_value: 6
 
 MinEntropy: False
-Constraint: convexity  # connectivity, convexity
+Constraint: None  # connectivity, convexity
 
 Constraints:
   Credit_type: binary # binary, discrete
   num_samples: 10
-  Reg_cons: True  # constraint loss
+  Reg_cons: False  # constraint loss
   VAT_base: False  # vat
   Rein_base: False # reinforce with baseline
   cons_weight: 0.001
   cons_connectivity: 1
 
 lvconvexity:
-  Convex_types: defects # hullR, defects, pseudoFG, pseudoBG, reverseFGBG
+  Convex_types: defects # convex_hull, defects, pseudo_like_FG, pseudo_like_BG, reverse_FGBG
 
 Kernel:
   flood_fill: 5

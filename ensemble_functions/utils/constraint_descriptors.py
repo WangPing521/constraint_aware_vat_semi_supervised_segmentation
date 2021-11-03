@@ -5,7 +5,7 @@ import cv2
 
 from ensemble_functions.utils.independent_functions import average_list
 
-device = 'cpu'
+device = 'cuda'
 
 def convexity_descriptor(x: Tensor, cons_types='convex_hull'):
     b, c, h, w = x.shape
