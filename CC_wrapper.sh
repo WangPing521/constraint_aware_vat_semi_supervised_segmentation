@@ -6,8 +6,8 @@ CC_wrapper(){
     account=$2
     command=$3
     mem=$4
-    module load python/3.6
-    source $HOME/torchenv36/bin/activate
+    module load python/3.8
+    source $HOME/venv_nondifferentiable/bin/activate
     module load scipy-stack
 	module load cmake
     echo ${command} > tmp.sh
