@@ -11,11 +11,11 @@ from ensemble_functions.utils.getmodel_tool import ModelList
 from ensemble_functions.utils.independent_functions import fix_all_seed, get_group_set
 from trainers.BaselinesTrainer import BaselinesTrainer
 from trainers.ConstraintCotVATTrainer import ConstraintCotVATTrainer
+from trainers.ConstraintTrainer import ConstraintTrainer
 from trainers.ConstraintVATTrainer import ConstraintVATTrainer
-from trainers.ConsvexityTrainer import ConvexityTrainer
-from trainers.ConsvexityVATTrainer import ConvexityVATTrainer
 from trainers.MTTrainer import MeanTeacherTrainer
 from trainers.MTVATconsTrainer import ConstraintMTVATTrainer
+from trainers.VATTrainer import VATTrainer
 from trainers.cotrainingTrainer import CotrainingTrainer
 
 config = ConfigManger("configs/config.yaml").config
@@ -23,7 +23,7 @@ fix_all_seed(config['seed'])
 
 # model setting
 model1 = Model(config["Arch"], config["Optim"], config["Scheduler"])
-if config["Trainer"]["name"] in["Baselines", "consVat", 'convextrainer', 'convexVATtrainer']:
+if config["Trainer"]["name"] in["Baselines", "NaiveVat", "consVat", "constraintReg", "consVat"]:
     model = ModelList([model1])
 elif config["Trainer"]["name"] == "co_training" or config["Trainer"]["name"] == "cotconsVAT":
     model2 = Model(config["Arch"], config["Optim"], config["Scheduler"])
@@ -70,20 +70,19 @@ print(
 
 # hyper-parameters' scheduler
 RegScheduler = RampScheduler(**config["RegScheduler"])
-AlphaScheduler = RampScheduler(**config["AlphaScheduler"])
-SelfPaceScheduler = RampScheduler(**config["SelfPaceScheduler"])
 
 # get the trainer
 Trainer_container = {
     "Baselines": BaselinesTrainer,
+    "NaiveVat": VATTrainer,
     "co_training": CotrainingTrainer,
-    "cotconsVAT": ConstraintCotVATTrainer,
     "MeanTeacher": MeanTeacherTrainer,
-    "MTconsvat": ConstraintMTVATTrainer,
+    "constraintReg": ConstraintTrainer,
     "consVat": ConstraintVATTrainer,
-    "convexVATtrainer": ConvexityVATTrainer,
-    "convextrainer": ConvexityTrainer
+    "cotconsVAT": ConstraintCotVATTrainer,
+    "MTconsvat": ConstraintMTVATTrainer,
 }
+
 trainer_name = Trainer_container.get(config['Trainer'].get('name'))
 trainer = trainer_name(
     model=model,
@@ -91,8 +90,6 @@ trainer = trainer_name(
     unlab_loader=unlab_loader,
     val_loader=val_loader,
     weight_scheduler=RegScheduler,
-    alpha_scheduler=AlphaScheduler,
-    selfpace_scheduler=SelfPaceScheduler,
     config=config,
     **config['Trainer']
 )

@@ -1,21 +1,17 @@
-from ensemble_functions.loss_functions.convexityVATloss import convexVATLoss
 from ensemble_functions.loss_functions.general_loss import SimplexCrossEntropyLoss
-from ensemble_functions.utils.consSamples import prob_sample
-from ensemble_functions.utils.constraint_descriptors import metric_convexity, convexity_descriptor
+from ensemble_functions.loss_functions.vat_loss import VATLoss
 from ensemble_functions.utils.independent_functions import class2one_hot, simplex
 from trainers.BaseTrainer import BaseTrainer
 import torch
 
 
-class ConvexityTrainer(BaseTrainer):
+class VATTrainer(BaseTrainer):
     def __init__(self,
                  model,
                  lab_loader,
                  unlab_loader,
                  val_loader,
                  weight_scheduler,
-                 alpha_scheduler,
-                 selfpace_scheduler,
                  max_epoch,
                  save_dir,
                  checkpoint_path: str = None,
@@ -30,8 +26,6 @@ class ConvexityTrainer(BaseTrainer):
                              unlab_loader,
                              val_loader,
                              weight_scheduler,
-                             alpha_scheduler,
-                             selfpace_scheduler,
                              max_epoch,
                              save_dir,
                              checkpoint_path,
@@ -40,10 +34,10 @@ class ConvexityTrainer(BaseTrainer):
                              num_batches,
                              *args,
                              **kwargs)
-        self.constraint = self._config['Constraint']
-        self._tmp = self._config['Temperature']
-        self._convexrewardtype = self._config['lvconvexity']['Convex_types']
+
         self._ce_criterion = SimplexCrossEntropyLoss()
+        self.tmp = self._config['VATsettings']['Temperature']
+        self.vatloss = VATLoss(eps=self._config['VATsettings']['pertur_eps'], temp=self.tmp)
 
     def _run_step(self, lab_data, unlab_data):
 
@@ -76,17 +70,11 @@ class ConvexityTrainer(BaseTrainer):
         )
         sup_loss = self._ce_criterion(lab_preds, onehot_target)
 
+        with torch.no_grad():
+            pred = (self._model[0](uimage) / self.tmp).softmax(1)
+        assert simplex(pred)
 
-        pred = (self._model[0](uimage) / self._tmp).softmax(1)
-
-
-        itspredictions, conssamples = prob_sample(pred, cons_types=self._convexrewardtype)
-        conssamples = conssamples.transpose(1, 0)
-        rewards = convexity_descriptor(conssamples, cons_types=self._convexrewardtype)
-        cons_loss = (- rewards.transpose(1, 0) * torch.log(itspredictions + 1e-6)).mean()
-
-
-        convex, hull, contour = metric_convexity(pred.max(1)[1])
+        lds = self.vatloss(self._model[0], uimage, pred)
 
         self._meter_interface[f"train{0}_dice"].add(
             lab_preds.max(1)[1],
@@ -94,7 +82,7 @@ class ConvexityTrainer(BaseTrainer):
             group_name=["_".join(x.split("_")[:-2]) for x in filename],
         )
 
-        return sup_loss, cons_loss, convex
+        return sup_loss, lds
 
 
 

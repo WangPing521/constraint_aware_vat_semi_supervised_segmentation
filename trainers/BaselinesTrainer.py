@@ -1,6 +1,5 @@
 from ensemble_functions.loss_functions.general_loss import SimplexCrossEntropyLoss
 from ensemble_functions.utils.independent_functions import class2one_hot
-from ensemble_functions.utils.non_diff_cons import reinforce_cons_loss
 from trainers.BaseTrainer import BaseTrainer
 import torch
 
@@ -12,8 +11,6 @@ class BaselinesTrainer(BaseTrainer):
                  unlab_loader,
                  val_loader,
                  weight_scheduler,
-                 alpha_scheduler,
-                 selfpace_scheduler,
                  max_epoch,
                  save_dir,
                  checkpoint_path: str = None,
@@ -28,8 +25,6 @@ class BaselinesTrainer(BaseTrainer):
                              unlab_loader,
                              val_loader,
                              weight_scheduler,
-                             alpha_scheduler,
-                             selfpace_scheduler,
                              max_epoch,
                              save_dir,
                              checkpoint_path,
@@ -39,7 +34,6 @@ class BaselinesTrainer(BaseTrainer):
                              *args,
                              **kwargs)
         self._ce_criterion = SimplexCrossEntropyLoss()
-        self.reinforce_cons_loss = reinforce_cons_loss(run_state='train')
 
     def _run_step(self, lab_data, unlab_data, *args, **kwargs):
         image, target, filename = (
@@ -68,17 +62,10 @@ class BaselinesTrainer(BaseTrainer):
             target.squeeze(1), self._config['Arch']['num_classes']
         )
 
-        sup_loss, semi_loss, C_reward = 0.0, 0.0, torch.ones((self._config['Arch']['num_classes']-1))
+        semi_loss = 0.0
         sup_loss = self._ce_criterion(lab_preds, onehot_target)
         uimage = unlab_data[0][0].to(self._device)
-        unlab_preds = torch.softmax(self._model[0](uimage) / self._config['Temperature'], dim=1)
-
-        if self._config["MinEntropy"]:
-            semi_loss = self._entropy_criterion(unlab_preds)
-
-        if self._config['Constraints']["Reg_cons"]:
-            semi_loss = self.reinforce_cons_loss(unlab_preds)
-            C_reward = self.report_constriant(unlab_preds, utarget)
+        unlab_preds = torch.softmax(self._model[0](uimage) / self._config['VATsettings']['Temperature'], dim=1)
 
         self._meter_interface[f"train{0}_dice"].add(
             lab_preds.max(1)[1],
@@ -86,7 +73,10 @@ class BaselinesTrainer(BaseTrainer):
             group_name=["_".join(x.split("_")[:-2]) for x in filename],
         )
 
-        return sup_loss, semi_loss, C_reward
+        if self._config["MinEntropy"]:
+            semi_loss = self._entropy_criterion(unlab_preds)
+
+        return sup_loss, semi_loss
 
 
 

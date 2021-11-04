@@ -30,7 +30,7 @@ DataLoader:
   num_workers: 0
 
 Trainer:
-  name: convexVATtrainer  # Baselines, consVat, consTransform, co_training, MeanTeacher, MTconsvat, cotconsVAT, convextrainer, convexVATtrainer
+  name: MTconsvat  # Baselines, NaiveVat, co_training, MeanTeacher, constraintReg, consVat, cotconsVAT, MTconsvat
   device: cuda
   save_dir: runs
   num_batches: 200
@@ -41,43 +41,25 @@ RegScheduler:
   begin_epoch: 5
   max_epoch: 50
   min_value: 0.0
-  max_value: 0.00001
-
-AlphaScheduler:
-  begin_epoch: 5
-  max_epoch: 50
-  min_value: 0.0
-  max_value: 0.5
-
-SelfPaceScheduler:
-  begin_epoch: 5
-  max_epoch: 50
-  min_value: 0.2
-  max_value: 6
+  max_value: 0
 
 MinEntropy: False
-Constraint: None  # connectivity, convexity
+
+VATsettings:
+  pertur_eps: 0.0001
+  Temperature: 1
 
 Constraints:
-  Credit_type: binary # binary, discrete
+  Constraint: convexity  # connectivity, convexity
   num_samples: 10
-  Reg_cons: False  # constraint loss
-  VAT_base: False  # vat
-  Rein_base: False # reinforce with baseline
   cons_weight: 0.001
-  cons_connectivity: 1
-
-lvconvexity:
-  Convex_types: defects # convex_hull, defects, pseudo_like_FG, pseudo_like_BG, reverse_FGBG
-
-Kernel:
-  flood_fill: 5
-  local_conn: 3
-
-Norm_style: L2  # L1, L2
-VATeps: 0.0001
-
-Temperature: 1
-Transform_option: rotate
+  Rein_baseline: False # reinforce with baseline
+  Connectivity:
+    diag_connectivity: 1 # exclude diag
+    credit_type: binary # binary, discrete
+    flood_fill_Kernel: 5
+    local_conn_Kernel: 3
+  Convexity:
+    credit_types: defects # convex_hull, defects, pseudo_like_FG, pseudo_like_BG, reverse_FGBG
 
 seed: 1234567

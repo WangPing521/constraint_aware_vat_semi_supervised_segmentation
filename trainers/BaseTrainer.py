@@ -8,11 +8,10 @@ from torch.utils.data.dataloader import _BaseDataLoaderIter
 
 from ensemble_functions.loss_functions.general_loss import JSD_div, Entropy
 from ensemble_functions.scheduler.customized_scheduler import RampScheduler
-from ensemble_functions.utils.constraint_descriptors import metric_convexity
 from ensemble_functions.utils.ensembel_model import ZeroGradientBackwardStep
 from ensemble_functions.utils.getmodel_tool import ModelList, ModelMode
 from ensemble_functions.utils.independent_functions import tqdm_, flatten_dict, nice_dict, save_images, average_list
-from ensemble_functions.utils.non_diff_cons import Report_reward
+from ensemble_functions.utils.non_diff_cons import metric_connectivity, metric_convexity
 from meters_record.averagemeter import AverageValueMeter
 from meters_record.general_dice_meter import UniversalDice
 from trainers.AbstractTrainer import _Trainer
@@ -30,8 +29,6 @@ class BaseTrainer(_Trainer):
             unlab_loader: Union[DataLoader, _BaseDataLoaderIter],
             val_loader: DataLoader,
             weight_scheduler: RampScheduler,
-            alpha_scheduler: RampScheduler,
-            selfpace_scheduler: RampScheduler,
             max_epoch: int = 100,
             save_dir: str = "base",
             checkpoint_path: str = None,
@@ -57,12 +54,12 @@ class BaseTrainer(_Trainer):
         self._unlab_loader = unlab_loader
         self._num_batches = num_batches
         self._weight_scheduler = weight_scheduler
-        self._alpha_scheduler = alpha_scheduler
-        self._selfpace_scheduler = selfpace_scheduler
         self.checkpoint_path = checkpoint_path
         self._entropy_criterion = Entropy()
         self._jsd_criterion = JSD_div()
-        self.report_constriant = Report_reward(Fscale=5, Cscale=3, run_state='val', my_connectivity=self._config['Constraints'].get('cons_connectivity'))
+        self.Fscale = self._config['Constraints']['Connectivity']['flood_fill_Kernel']
+        self.Cscale = self._config['Constraints']['Connectivity']['local_conn_Kernel']
+        self.report_constriant = metric_connectivity(Fscale=self.Fscale, Cscale=self.Cscale, run_state='val', my_connectivity=self._config['Constraints']['Connectivity'].get('diag_connectivity'))
         self._cons_weight = self._config['Constraints']['cons_weight']
 
     def register_meters(self, enable_drawer=True) -> None:
@@ -84,10 +81,10 @@ class BaseTrainer(_Trainer):
             "sup_loss", AverageValueMeter(), group_name="train"
         )
         self._meter_interface.register_new_meter(
-            "rein_loss", AverageValueMeter(), group_name="train"
+            "reg_loss", AverageValueMeter(), group_name="train"
         )
         self._meter_interface.register_new_meter(
-            "lds", AverageValueMeter(), group_name="train"
+            "rein_loss", AverageValueMeter(), group_name="train"
         )
         # weight
         self._meter_interface.register_new_meter(
@@ -95,14 +92,18 @@ class BaseTrainer(_Trainer):
         )
         # validation
         self._meter_interface.register_new_meter(
-            f"val_mean_non-satify_ratio", AverageValueMeter(), group_name="val"
+            f"val_mean_non_conn", AverageValueMeter(), group_name="val"
         )
+        self._meter_interface.register_new_meter(
+            f"val_mean_non_conv", AverageValueMeter(), group_name="val"
+        )
+
         for i in range(self._config['Arch']['num_classes']-1):
             self._meter_interface.register_new_meter(
-                f"val_c{i}non-satify_ratio", AverageValueMeter(), group_name="val"
+                f"val_c{i}non_con", AverageValueMeter(), group_name="val"
             )
             self._meter_interface.register_new_meter(
-                f"train_c{i}non-satify_ratio", AverageValueMeter(), group_name="train"
+                f"train_c{i}non_con", AverageValueMeter(), group_name="train"
             )
 
         for i in range(len(self._model)):
@@ -126,21 +127,23 @@ class BaseTrainer(_Trainer):
         batch_indicator = tqdm_(range(self._num_batches))
         batch_indicator.set_description(f"Training Epoch {epoch:03d}")
         sum_disc, count = 0, 0
+        reg_loss, rein_cons = 0, 0
         s_co = min(1 - 1 / (epoch + 1), 0.999)
         for batch_id, lab_data, unlab_data in zip(batch_indicator, lab_loader, unlab_loader):
-            if self._config['Trainer']['name'] == 'Baselines' or self._config['Trainer']['name'] == "co_training" or \
-                    self._config['Trainer']['name'] == "MeanTeacher" or self._config['Trainer']['name'] == 'convextrainer':
-                # baselines and min entropy methods
-                sup_loss, reg_loss, c_reward = self.run_step(lab_data=lab_data, unlab_data=unlab_data)
-                rein_cons = 0
-                count = count + 1
-                sum_disc = sum_disc + c_reward
-            elif self._config['Trainer']['name'] in ['consVat', 'MTconsvat', 'cotconsVAT', 'convexVATtrainer']:
-                sup_loss, reg_loss, rein_cons, c_reward = self.run_step(lab_data=lab_data, unlab_data=unlab_data)
-                count = count + 1
-                sum_disc = sum_disc + c_reward
+            if self._config['Trainer']['name'] in ['Baselines', 'co_training', 'MeanTeacher', 'NaiveVat']:
+                sup_loss, reg_loss = self.run_step(lab_data=lab_data, unlab_data=unlab_data)
 
-            if self._config['Trainer']['name'] == "MeanTeacher" or self._config['Trainer']['name'] == "MTconsvat":
+            elif self._config['Trainer']['name'] in ['consVat', 'MTconsvat', 'cotconsVAT']:
+                sup_loss, reg_loss, rein_cons, non_con = self.run_step(lab_data=lab_data, unlab_data=unlab_data)
+                count = count + 1
+                sum_disc = sum_disc + non_con
+
+            elif self._config['Trainer']['name'] == 'constraintReg':
+                sup_loss, rein_cons, non_con = self.run_step(lab_data=lab_data, unlab_data=unlab_data)
+                count = count + 1
+                sum_disc = sum_disc + non_con
+
+            if self._config['Trainer']['name'] in ["MeanTeacher", "MTconsvat"]:
                 with ZeroGradientBackwardStep(
                         sup_loss + self._weight_scheduler.value * reg_loss + self._cons_weight * rein_cons,
                         self._model[0]
@@ -158,23 +161,23 @@ class BaseTrainer(_Trainer):
 
             self._meter_interface['total_loss'].add(loss.item())
             self._meter_interface['sup_loss'].add(sup_loss.item())
-            if self._config['Constraints']['VAT_base']:
-                self._meter_interface['lds'].add(reg_loss.item())
-            if self._config['Constraints']['Reg_cons']:
+
+            if self._config['Trainer']['name'] not in ['constraintReg', 'Baselines']:
+                self._meter_interface['reg_loss'].add(reg_loss.item())
+            if self._config['Trainer']['name'] == "Baselines" and self._config['MinEntropy']:
+                self._meter_interface['reg_loss'].add(reg_loss.item())
+
+            if self._config['Trainer']['name'] in ['consVat', 'MTconsvat', 'cotconsVAT', 'constraintReg']:
                 self._meter_interface['rein_loss'].add(rein_cons.item())
 
-            if self._config['Constraint'] == 'convexity':
-                self._meter_interface['rein_loss'].add(rein_cons.item())
-
-            if self._config['Trainer']['name'] == 'convextrainer':
-                self._meter_interface['rein_loss'].add(reg_loss.item())
 
             if ((batch_id + 1) % 5) == 0:
                 report_statue = self._meter_interface.tracking_status("train")
                 batch_indicator.set_postfix(flatten_dict(report_statue))
 
-        for i in range(self._config['Arch']['num_classes']-1):
-            self._meter_interface[f'train_c{i}non-satify_ratio'].add((sum_disc[i] / count).cpu())
+        if self._config['Trainer']['name'] in ['consVat', 'MTconsvat', 'cotconsVAT', 'constraintReg']:
+            for i in range(self._config['Arch']['num_classes']-1):
+                self._meter_interface[f'train_c{i}non_con'].add((sum_disc[i] / count).cpu())
 
         report_statue = self._meter_interface.tracking_status("train")
         batch_indicator.set_postfix(flatten_dict(report_statue))
@@ -192,7 +195,7 @@ class BaseTrainer(_Trainer):
         **kwargs,
     ) -> float:
         self._model.set_mode(mode)
-        count, avg_c_reward = 0, 0
+        count, avg_cn_reward, avg_cv_reward = 0, 0, 0
         val_indicator = tqdm_(val_loader)
         val_indicator.set_description(f"Val_Epoch {epoch:03d}")
         for batch_id, data in enumerate(val_indicator):
@@ -213,7 +216,7 @@ class BaseTrainer(_Trainer):
                     target = torch.where(target == 2, torch.Tensor([1]).to(self._device),
                                      torch.Tensor([0]).to(self._device))
             ensembel_pred = []
-            if self._config['Trainer']['name'] == "MeanTeacher" or self._config['Trainer']['name'] == "MTconsvat":
+            if self._config['Trainer']['name'] in ['MeanTeacher', 'MTconsvat']:
                 num_model = int(len(self._model) / 2)
             else:
                 num_model = len(self._model)
@@ -231,12 +234,12 @@ class BaseTrainer(_Trainer):
                 ensemble = ensemble + ensembel_pred[num]
             ensemble = ensemble / num_model
 
-            if self._config['Constraint'] == 'connectivity':
-                C_reward = self.report_constriant(ensemble, target)
-            elif self._config['Constraint'] == 'convexity':
-                C_reward, val_hull, val_contour = metric_convexity(ensemble.max(1)[1])
 
-            avg_c_reward = avg_c_reward + C_reward
+            non_connect = self.report_constriant(ensemble, target)
+            non_convex, val_hull, val_contour = metric_convexity(ensemble.max(1)[1])
+
+            avg_cn_reward = avg_cn_reward + non_connect
+            avg_cv_reward = avg_cv_reward + non_convex
             count = count + 1
 
             self._meter_interface[f"ensemble_dice"].add(
@@ -251,10 +254,14 @@ class BaseTrainer(_Trainer):
                 report_statue = self._meter_interface.tracking_status("val")
                 val_indicator.set_postfix(flatten_dict(report_statue))
 
-        self._meter_interface[f'val_mean_non-satify_ratio'].add(sum((avg_c_reward/count))/avg_c_reward.shape[0])
+
+        self._meter_interface[f'val_mean_non_conn'].add(sum((avg_cn_reward/count))/avg_cn_reward.shape[0])
+        self._meter_interface[f'val_mean_non_conv'].add(sum((avg_cv_reward/count))/avg_cv_reward.shape[0])
 
         for i in range(self._config['Arch']['num_classes']-1):
-            self._meter_interface[f'val_c{i}non-satify_ratio'].add((avg_c_reward[i] / count).cpu())
+            self._meter_interface[f'val_c{i}val_mean_non_conn'].add((avg_cn_reward[i] / count).cpu())
+            self._meter_interface[f'val_c{i}val_mean_non_conv'].add((avg_cv_reward[i] / count).cpu())
+
 
         report_statue = self._meter_interface.tracking_status("val")
         val_indicator.set_postfix(flatten_dict(report_statue))
@@ -275,8 +282,6 @@ class BaseTrainer(_Trainer):
         for segmentator in self._model:
             segmentator.schedulerStep()
         self._weight_scheduler.step()
-        self._alpha_scheduler.step()
-        self._selfpace_scheduler.step()
 
     def _start_training(self):
         self.to(self._device)

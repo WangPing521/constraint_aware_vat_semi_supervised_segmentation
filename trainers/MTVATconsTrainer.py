@@ -1,7 +1,7 @@
 from ensemble_functions.loss_functions.general_loss import SimplexCrossEntropyLoss
 from ensemble_functions.utils.generateADimg import generateAD
 from ensemble_functions.utils.independent_functions import class2one_hot, simplex
-from ensemble_functions.utils.non_diff_cons import reinforce_cons_loss
+from ensemble_functions.utils.non_diff_cons import reinforce_cons_loss, metric_convexity
 from trainers.BaseTrainer import BaseTrainer
 import torch
 from torch.nn import functional as F
@@ -14,8 +14,6 @@ class ConstraintMTVATTrainer(BaseTrainer):
                  unlab_loader,
                  val_loader,
                  weight_scheduler,
-                 alpha_scheduler,
-                 selfpace_scheduler,
                  max_epoch,
                  save_dir,
                  checkpoint_path: str = None,
@@ -30,8 +28,6 @@ class ConstraintMTVATTrainer(BaseTrainer):
                              unlab_loader,
                              val_loader,
                              weight_scheduler,
-                             alpha_scheduler,
-                             selfpace_scheduler,
                              max_epoch,
                              save_dir,
                              checkpoint_path,
@@ -40,13 +36,29 @@ class ConstraintMTVATTrainer(BaseTrainer):
                              num_batches,
                              *args,
                              **kwargs)
+        self.constraint = self._config['Constraints']['Constraint']
+        self.num_samples = self._config['Constraints']['num_samples']
         self.weight = self._config['Constraints']['cons_weight']
-        self.credit_type = self._config['Constraints']['Credit_type']
-        self.rein_base = self._config['Constraints']['Rein_base']
+        self.rein_baseline = self._config['Constraints']['Rein_baseline']
+        if self.constraint == "connectivity":
+            self.credit_type = self._config['Constraints']['Connectivity']['credit_type']  # binary and discrete
+        else:
+            self.credit_type = self._config['Constraints']['Convexity'][
+                'credit_types']  # convex_hull, defects, pseudo_like_FG, pseudo_like_BG, reverse_FGBG
+        self.tmp = self._config['VATsettings']['Temperature']
+        self.diag_connectivity = self._config['Constraints']['Connectivity']['diag_connectivity']
+        self.Fscale = self._config['Constraints']['Connectivity']['flood_fill_Kernel']
+        self.Cscale = self._config['Constraints']['Connectivity']['local_conn_Kernel']
+        self.adexample = generateAD(eps=self._config['VATsettings']['pertur_eps'], temp=self.tmp,
+                                    constraint=self.constraint,
+                                    num_samples=self.num_samples, consweight=self.weight,
+                                    rein_baseline=self.rein_baseline, reward_type=self.credit_type,
+                                    Fscale=self.Fscale, Cscale=self.Cscale, my_connectivity=self.diag_connectivity)
+        self.reinforce_cons_loss = reinforce_cons_loss(num_sample=self.num_samples, constraint=self.constraint,
+                                                       Fscale=self.Fscale, Cscale=self.Cscale,
+                                                       my_connectivity=self.diag_connectivity, run_state='train',
+                                                       reward_type=self.credit_type, rein_baseline=self.rein_baseline)
         self._ce_criterion = SimplexCrossEntropyLoss()
-        self.adexample = generateAD(eps=self._config['VATeps'], consweight=self.weight, temp=self._config['Temperature'],
-                                    norm_way='L2', reward_type=self.credit_type, rein_baseline=self.rein_base)
-        self.reinforce_cons_loss = reinforce_cons_loss(run_state='train', reward_type=self.credit_type, rein_baseline=self.rein_base)
 
     def _run_step(self, lab_data, unlab_data):
 
@@ -81,12 +93,11 @@ class ConstraintMTVATTrainer(BaseTrainer):
         lab_preds = self._model[0](image).softmax(1)
         unlab_predT = self._model[1](uimage).softmax(1)
 
-        uimage_ad = self.adexample(self._model[0], uimage, unlab_predT)
-        unlab_predS = self._model[0](uimage_ad).softmax(1)
+        with torch.no_grad():
+            uimage_preds_tmp = (self._model[0](uimage) / self.tmp).softmax(1)
 
-        cons_S = 0
-        if self._config['Constraints']["Reg_cons"]:
-            cons_S = self.reinforce_cons_loss(unlab_predS)
+        uimage_ad = self.adexample(self._model[0], uimage, uimage_preds_tmp)
+        unlab_predS = self._model[0](uimage_ad).softmax(1)
 
         sup_loss = self._ce_criterion(lab_preds, onehot_target)
         consistency_loss = F.mse_loss(unlab_predS, unlab_predT)
@@ -96,9 +107,15 @@ class ConstraintMTVATTrainer(BaseTrainer):
             target.squeeze(1),
             group_name=["_".join(x.split("_")[:-2]) for x in filename],
         )
-        C_reward = self.report_constriant(unlab_predS, utarget)
 
-        return sup_loss, consistency_loss, cons_S, C_reward
+        cons = self.reinforce_cons_loss(unlab_predS)
+
+        if self.constraint == "connectivity":
+            non_con = self.report_constriant(unlab_predS, utarget)
+        elif self.constraint == "convexity":
+            non_con, hull, contour = metric_convexity(uimage_preds_tmp.max(1)[1])
+
+        return sup_loss, consistency_loss, cons, non_con
 
 
 

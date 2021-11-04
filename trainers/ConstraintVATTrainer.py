@@ -1,6 +1,7 @@
 from ensemble_functions.loss_functions.cons_vat_loss import consVATLoss
 from ensemble_functions.loss_functions.general_loss import SimplexCrossEntropyLoss
 from ensemble_functions.utils.independent_functions import class2one_hot, simplex
+from ensemble_functions.utils.non_diff_cons import metric_convexity
 from trainers.BaseTrainer import BaseTrainer
 import torch
 
@@ -12,8 +13,6 @@ class ConstraintVATTrainer(BaseTrainer):
                  unlab_loader,
                  val_loader,
                  weight_scheduler,
-                 alpha_scheduler,
-                 selfpace_scheduler,
                  max_epoch,
                  save_dir,
                  checkpoint_path: str = None,
@@ -28,8 +27,6 @@ class ConstraintVATTrainer(BaseTrainer):
                              unlab_loader,
                              val_loader,
                              weight_scheduler,
-                             alpha_scheduler,
-                             selfpace_scheduler,
                              max_epoch,
                              save_dir,
                              checkpoint_path,
@@ -38,19 +35,24 @@ class ConstraintVATTrainer(BaseTrainer):
                              num_batches,
                              *args,
                              **kwargs)
-        self.constraint = self._config['Constraint']
+        self.constraint = self._config['Constraints']['Constraint']
+        self.num_samples = self._config['Constraints']['num_samples']
         self.weight = self._config['Constraints']['cons_weight']
-        self.vat_base = self._config['Constraints']['VAT_base']
-        self.reg_constraint = self._config['Constraints']['Reg_cons']
-        self.rein_base = self._config['Constraints']['Rein_base']
-        self.credit_type = self._config['Constraints']['Credit_type']
-        self.cons_connectivity = self._config['Constraints']['cons_connectivity']
+        self.rein_baseline = self._config['Constraints']['Rein_baseline']
+        if self.constraint == "connectivity":
+            self.credit_type = self._config['Constraints']['Connectivity']['credit_type']  # binary and discrete
+        else:
+            self.credit_type = self._config['Constraints']['Convexity']['credit_types']  #  convex_hull, defects, pseudo_like_FG, pseudo_like_BG, reverse_FGBG
+
+        self.diag_connectivity = self._config['Constraints']['Connectivity']['diag_connectivity']
+        self.tmp = self._config['VATsettings']['Temperature']
         self._ce_criterion = SimplexCrossEntropyLoss()
-        self.cons_vatloss = consVATLoss(eps=self._config['VATeps'], consweight=self.weight, constraint=self.constraint, vat_base=self.vat_base,
-                                        reg_constraint=self.reg_constraint, temp=self._config['Temperature'], Fscale=self._config['Kernel']['flood_fill'],
-                                        Cscale=self._config['Kernel']['local_conn'],
-                                        norm_way=self._config['Norm_style'], reward_type=self.credit_type, rein_baseline=self.rein_base,
-                                        my_connectivity=self.cons_connectivity)
+        self.cons_vatloss = consVATLoss(eps=self._config['VATsettings']['pertur_eps'], temp=self.tmp,
+                                        constraint=self.constraint, num_samples=self.num_samples, consweight=self.weight,
+                                        rein_baseline=self.rein_baseline, reward_type=self.credit_type,
+                                        Fscale=self._config['Constraints']['Connectivity']['flood_fill_Kernel'],
+                                        Cscale=self._config['Constraints']['Connectivity']['local_conn_Kernel'],
+                                        my_connectivity=self.diag_connectivity)
 
     def _run_step(self, lab_data, unlab_data):
 
@@ -85,11 +87,15 @@ class ConstraintVATTrainer(BaseTrainer):
 
         with torch.no_grad():
             # pred = torch.softmax(self._model[0](uimage) / self._config['Temperature'], dim=1)
-            pred = (self._model[0](uimage) / self._config['Temperature']).softmax(1)
+            pred = (self._model[0](uimage) / self.tmp).softmax(1)
         assert simplex(pred)
 
         lds, cons = self.cons_vatloss(self._model[0], uimage, pred)
-        C_reward = self.report_constriant(pred, utarget)
+
+        if self.constraint == "connectivity":
+            non_con = self.report_constriant(pred, utarget)
+        elif self.constraint == "convexity":
+            non_con, hull, contour = metric_convexity(pred.max(1)[1])
 
         self._meter_interface[f"train{0}_dice"].add(
             lab_preds.max(1)[1],
@@ -97,7 +103,7 @@ class ConstraintVATTrainer(BaseTrainer):
             group_name=["_".join(x.split("_")[:-2]) for x in filename],
         )
 
-        return sup_loss, lds, cons, C_reward
+        return sup_loss, lds, cons, non_con
 
 
 

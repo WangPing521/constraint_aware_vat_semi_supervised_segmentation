@@ -1,20 +1,17 @@
-from ensemble_functions.loss_functions.convexityVATloss import convexVATLoss
 from ensemble_functions.loss_functions.general_loss import SimplexCrossEntropyLoss
-from ensemble_functions.utils.constraint_descriptors import metric_convexity
-from ensemble_functions.utils.independent_functions import class2one_hot, simplex
+from ensemble_functions.utils.independent_functions import class2one_hot
+from ensemble_functions.utils.non_diff_cons import reinforce_cons_loss, metric_convexity, metric_connectivity
 from trainers.BaseTrainer import BaseTrainer
 import torch
 
 
-class ConvexityVATTrainer(BaseTrainer):
+class ConstraintTrainer(BaseTrainer):
     def __init__(self,
                  model,
                  lab_loader,
                  unlab_loader,
                  val_loader,
                  weight_scheduler,
-                 alpha_scheduler,
-                 selfpace_scheduler,
                  max_epoch,
                  save_dir,
                  checkpoint_path: str = None,
@@ -29,8 +26,6 @@ class ConvexityVATTrainer(BaseTrainer):
                              unlab_loader,
                              val_loader,
                              weight_scheduler,
-                             alpha_scheduler,
-                             selfpace_scheduler,
                              max_epoch,
                              save_dir,
                              checkpoint_path,
@@ -39,13 +34,27 @@ class ConvexityVATTrainer(BaseTrainer):
                              num_batches,
                              *args,
                              **kwargs)
-        self.constraint = self._config['Constraint']
+        self.constraint = self._config['Constraints']['Constraint']
+        self.num_samples = self._config['Constraints']['num_samples']
         self.weight = self._config['Constraints']['cons_weight']
-        self.vat_base = self._config['Constraints']['VAT_base']
-        self._tmp = self._config['Temperature']
-        self._convexrewardtype = self._config['lvconvexity']['Convex_types']
+        self.rein_baseline = self._config['Constraints']['Rein_baseline']
+        if self.constraint == "connectivity":
+            self.credit_type = self._config['Constraints']['Connectivity']['credit_type']  # binary and discrete
+        else:
+            self.credit_type = self._config['Constraints']['Convexity'][
+                'credit_types']  # convex_hull, defects, pseudo_like_FG, pseudo_like_BG, reverse_FGBG
+
+        self.diag_connectivity = self._config['Constraints']['Connectivity']['diag_connectivity']
+        self._tmp = self._config['VATsettings']['Temperature']
+        self.Fscale = self._config['Constraints']['Connectivity']['flood_fill_Kernel']
+        self.Cscale = self._config['Constraints']['Connectivity']['local_conn_Kernel']
         self._ce_criterion = SimplexCrossEntropyLoss()
-        self.convex_vatloss = convexVATLoss(eps=config['VATeps'], consweight=self.weight, constraint=self.constraint, vat_base=self.vat_base, temp=self._tmp, reward_types=self._convexrewardtype)
+        self.reinforce_cons_loss = reinforce_cons_loss(num_sample=self.num_samples, constraint=self.constraint,
+                                                   Fscale=self.Fscale,
+                                                   Cscale=self.Cscale,
+                                                   reward_type=self.credit_type, my_connectivity=self.diag_connectivity,
+                                                   rein_baseline=self.rein_baseline)
+        self.metric_connectivity=metric_connectivity(Fscale=self.Fscale, Cscale=self.Cscale, my_connectivity=self.diag_connectivity)
 
     def _run_step(self, lab_data, unlab_data):
 
@@ -78,13 +87,8 @@ class ConvexityVATTrainer(BaseTrainer):
         )
         sup_loss = self._ce_criterion(lab_preds, onehot_target)
 
-        with torch.no_grad():
-            # pred = torch.softmax(self._model[0](uimage) / self._config['Temperature'], dim=1)
-            pred = (self._model[0](uimage) / self._config['Temperature']).softmax(1)
-        assert simplex(pred)
-
-        lds, cons = self.convex_vatloss(self._model[0], uimage, pred)
-        convex, hull, contour = metric_convexity(pred.max(1)[1])
+        pred = (self._model[0](uimage) / self._tmp).softmax(1)
+        cons_loss = self.reinforce_cons_loss(pred)
 
         self._meter_interface[f"train{0}_dice"].add(
             lab_preds.max(1)[1],
@@ -92,7 +96,12 @@ class ConvexityVATTrainer(BaseTrainer):
             group_name=["_".join(x.split("_")[:-2]) for x in filename],
         )
 
-        return sup_loss, lds, cons, convex
+        if self.constraint == "connectivity":
+            non_con = self.metric_connectivity(pred, utarget)
+        elif self.constraint == "convexity":
+            non_con, hull, contour = metric_convexity(pred.max(1)[1])
+
+        return sup_loss, cons_loss, non_con
 
 
 

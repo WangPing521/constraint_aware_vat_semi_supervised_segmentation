@@ -4,38 +4,27 @@ import torch.nn as nn
 import torch
 
 from ensemble_functions.loss_functions.general_loss import KL_div
-from ensemble_functions.utils.independent_functions import _l2_normalize, _disable_tracking_bn_stats
+from ensemble_functions.utils.independent_functions import simplex, _l2_normalize, _disable_tracking_bn_stats, \
+    _l1_normalize
 from ensemble_functions.utils.non_diff_cons import reinforce_cons_loss
 
 
-class consVATLoss(nn.Module):
+class VATLoss(nn.Module):
     def __init__(
-        self, xi=10.0, eps=1.0, ip=2, temp=1, distance_func=KL_div(), constraint='connectivity', num_samples=10, consweight=0.5,
-            rein_baseline =False, reward_type="binary", Fscale=5, Cscale=3, my_connectivity=None
+        self, xi=10.0, eps=1.0, ip=2, distance_func=KL_div(), temp=1,
+
     ):
         """VAT loss
         :param xi: hyperparameter of VAT (default: 10.0)
         :param eps: hyperparameter of VAT (default: 1.0)
         :param ip: iteration times of computing adv noise (default: 2)
         """
-        super(consVATLoss, self).__init__()
+        super(VATLoss, self).__init__()
         self.xi = xi
         self.eps = eps
         self.ip = ip
-        self.temp = temp
         self.distance_func = distance_func
-        self.constraint = constraint
-        self.num_samples = num_samples
-        self.consweight = consweight
-        self.rein_baseline = rein_baseline
-        self.reward_type = reward_type
-        self.Fscale = Fscale
-        self.Cscale = Cscale
-        self.my_connectivity = my_connectivity
-        self.reinforce_cons_loss = reinforce_cons_loss(num_sample=self.num_samples, constraint=self.constraint, Fscale=self.Fscale,
-                                                       Cscale=self.Cscale, reward_type=self.reward_type,
-                                                       my_connectivity=self.my_connectivity, rein_baseline=self.rein_baseline)
-
+        self.temp = temp
 
     def forward(self, model, x: torch.Tensor, pred):
         """
@@ -54,13 +43,10 @@ class consVATLoss(nn.Module):
             for _ in range(self.ip):
                 d.requires_grad_()
                 pred_hat = (model(x + self.xi * d) / self.temp).softmax(1)
-                # pred_hat = torch.softmax(model(x + self.xi * d) / self.temp, dim=1)
                 adv_distance = self.distance_func(pred_hat, pred)
-                adv_cons = self.reinforce_cons_loss(pred_hat)
-
-                adv_loss = adv_distance + self.consweight * adv_cons
-                adv_loss.backward()
+                adv_distance.backward()
                 d = _l2_normalize(d.grad)
+
 
             # calc LDS
             if isinstance(self.eps, torch.Tensor):
@@ -77,5 +63,4 @@ class consVATLoss(nn.Module):
             # pred_hat = torch.softmax(model(x + r_adv) / self.temp, dim=1)
             pred_hat = (model(x + r_adv) / self.temp).softmax(1)
             lds = self.distance_func(pred_hat, pred)
-            cons = self.reinforce_cons_loss(pred_hat)
-        return lds, cons
+        return lds
