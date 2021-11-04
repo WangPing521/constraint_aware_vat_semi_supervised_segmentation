@@ -57,6 +57,7 @@ class BaseTrainer(_Trainer):
         self.checkpoint_path = checkpoint_path
         self._entropy_criterion = Entropy()
         self._jsd_criterion = JSD_div()
+        self.constraint = self._config['Constraints']['Constraint']
         self.Fscale = self._config['Constraints']['Connectivity']['flood_fill_Kernel']
         self.Cscale = self._config['Constraints']['Connectivity']['local_conn_Kernel']
         self.report_constriant = metric_connectivity(Fscale=self.Fscale, Cscale=self.Cscale, run_state='val', my_connectivity=self._config['Constraints']['Connectivity'].get('diag_connectivity'))
@@ -176,8 +177,11 @@ class BaseTrainer(_Trainer):
                 batch_indicator.set_postfix(flatten_dict(report_statue))
 
         if self._config['Trainer']['name'] in ['consVat', 'MTconsvat', 'cotconsVAT', 'constraintReg']:
-            for i in range(self._config['Arch']['num_classes']-1):
-                self._meter_interface[f'train_c{i}non_con'].add((sum_disc[i] / count).cpu())
+            if self.constraint == "connectivity":
+                for i in range(self._config['Arch']['num_classes']-1):
+                    self._meter_interface[f'train_c{i}non_con'].add((sum_disc[i] / count).cpu())
+            else:
+                self._meter_interface[f'train_c0non_con'].add((sum_disc / count).cpu())
 
         report_statue = self._meter_interface.tracking_status("train")
         batch_indicator.set_postfix(flatten_dict(report_statue))
@@ -256,12 +260,13 @@ class BaseTrainer(_Trainer):
 
 
         self._meter_interface[f'val_mean_non_conn'].add(sum((avg_cn_reward/count))/avg_cn_reward.shape[0])
-        self._meter_interface[f'val_mean_non_conv'].add(sum((avg_cv_reward/count))/avg_cv_reward.shape[0])
+        self._meter_interface[f'val_mean_non_conv'].add(avg_cv_reward/count)
 
         for i in range(self._config['Arch']['num_classes']-1):
-            self._meter_interface[f'val_c{i}val_mean_non_conn'].add((avg_cn_reward[i] / count).cpu())
-            self._meter_interface[f'val_c{i}val_mean_non_conv'].add((avg_cv_reward[i] / count).cpu())
-
+            if self.constraint == "connectivity":
+                self._meter_interface[f'val_c{i}non_con'].add((avg_cn_reward[i] / count).cpu())
+            else:
+                self._meter_interface[f'val_c0non_con'].add((avg_cv_reward / count).cpu())
 
         report_statue = self._meter_interface.tracking_status("val")
         val_indicator.set_postfix(flatten_dict(report_statue))

@@ -50,7 +50,7 @@ VATsettings:
   Temperature: 1
 
 Constraints:
-  Constraint: convexity  # connectivity, convexity
+  Constraint: connectivity  # connectivity, convexity
   num_samples: 10
   cons_weight: 0.001
   Rein_baseline: False # reinforce with baseline
