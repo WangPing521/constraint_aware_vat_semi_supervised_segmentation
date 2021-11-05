@@ -15,6 +15,7 @@ from trainers.ConstraintTrainer import ConstraintTrainer
 from trainers.ConstraintVATTrainer import ConstraintVATTrainer
 from trainers.MTTrainer import MeanTeacherTrainer
 from trainers.MTVATconsTrainer import ConstraintMTVATTrainer
+from trainers.PseudoTrainer import PseudoTrainer
 from trainers.VATTrainer import VATTrainer
 from trainers.cotrainingTrainer import CotrainingTrainer
 
@@ -81,6 +82,7 @@ Trainer_container = {
     "consVat": ConstraintVATTrainer,
     "cotconsVAT": ConstraintCotVATTrainer,
     "MTconsvat": ConstraintMTVATTrainer,
+    "Pseudolike": PseudoTrainer
 }
 
 trainer_name = Trainer_container.get(config['Trainer'].get('name'))

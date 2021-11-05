@@ -30,7 +30,7 @@ DataLoader:
   num_workers: 0
 
 Trainer:
-  name: MTconsvat  # Baselines, NaiveVat, co_training, MeanTeacher, constraintReg, consVat, cotconsVAT, MTconsvat
+  name: MTconsvat  # Baselines, NaiveVat, co_training, MeanTeacher, constraintReg, consVat, cotconsVAT, MTconsvat, Pseudolike
   device: cuda
   save_dir: runs
   num_batches: 200

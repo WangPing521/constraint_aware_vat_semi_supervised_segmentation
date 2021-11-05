@@ -139,7 +139,7 @@ class BaseTrainer(_Trainer):
                 count = count + 1
                 sum_disc = sum_disc + non_con
 
-            elif self._config['Trainer']['name'] == 'constraintReg':
+            elif self._config['Trainer']['name'] in ['constraintReg', 'Pseudolike']:
                 sup_loss, rein_cons, non_con = self.run_step(lab_data=lab_data, unlab_data=unlab_data)
                 count = count + 1
                 sum_disc = sum_disc + non_con
@@ -163,12 +163,12 @@ class BaseTrainer(_Trainer):
             self._meter_interface['total_loss'].add(loss.item())
             self._meter_interface['sup_loss'].add(sup_loss.item())
 
-            if self._config['Trainer']['name'] not in ['constraintReg', 'Baselines']:
+            if self._config['Trainer']['name'] not in ['constraintReg', 'Baselines', 'Pseudolike']:
                 self._meter_interface['reg_loss'].add(reg_loss.item())
             if self._config['Trainer']['name'] == "Baselines" and self._config['MinEntropy']:
                 self._meter_interface['reg_loss'].add(reg_loss.item())
 
-            if self._config['Trainer']['name'] in ['consVat', 'MTconsvat', 'cotconsVAT', 'constraintReg']:
+            if self._config['Trainer']['name'] in ['consVat', 'MTconsvat', 'cotconsVAT', 'constraintReg', 'Pseudolike']:
                 self._meter_interface['rein_loss'].add(rein_cons.item())
 
 
@@ -176,7 +176,7 @@ class BaseTrainer(_Trainer):
                 report_statue = self._meter_interface.tracking_status("train")
                 batch_indicator.set_postfix(flatten_dict(report_statue))
 
-        if self._config['Trainer']['name'] in ['consVat', 'MTconsvat', 'cotconsVAT', 'constraintReg']:
+        if self._config['Trainer']['name'] in ['consVat', 'MTconsvat', 'cotconsVAT', 'constraintReg', 'Pseudolike']:
             if self.constraint == "connectivity":
                 for i in range(self._config['Arch']['num_classes']-1):
                     self._meter_interface[f'train_c{i}non_con'].add((sum_disc[i] / count).cpu())
