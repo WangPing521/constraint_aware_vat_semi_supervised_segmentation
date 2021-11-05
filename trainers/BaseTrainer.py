@@ -259,8 +259,8 @@ class BaseTrainer(_Trainer):
                 val_indicator.set_postfix(flatten_dict(report_statue))
 
 
-        self._meter_interface[f'val_mean_non_conn'].add(sum((avg_cn_reward/count))/avg_cn_reward.shape[0])
-        self._meter_interface[f'val_mean_non_conv'].add(avg_cv_reward/count)
+        self._meter_interface[f'val_mean_non_conn'].add((sum((avg_cn_reward/count))/avg_cn_reward.shape[0]).cpu())
+        self._meter_interface[f'val_mean_non_conv'].add((avg_cv_reward/count).cpu())
 
         for i in range(self._config['Arch']['num_classes']-1):
             if self.constraint == "connectivity":
