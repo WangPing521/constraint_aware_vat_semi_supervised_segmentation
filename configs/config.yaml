@@ -40,11 +40,11 @@ Trainer:
 RegScheduler:
   begin_epoch: 5
   max_epoch: 50
-  min_value: 0.0
+  min_value: 0
   max_value: 0
 
 ConstraintWeightScheduler:
-  begin_epoch: 15
+  begin_epoch: 10
   max_epoch: 50
   min_value: 0
   max_value: 0
