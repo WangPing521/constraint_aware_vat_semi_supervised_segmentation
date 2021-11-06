@@ -12,6 +12,7 @@ class ConstraintTrainer(BaseTrainer):
                  unlab_loader,
                  val_loader,
                  weight_scheduler,
+                 constraint_scheduler,
                  max_epoch,
                  save_dir,
                  checkpoint_path: str = None,
@@ -26,6 +27,7 @@ class ConstraintTrainer(BaseTrainer):
                              unlab_loader,
                              val_loader,
                              weight_scheduler,
+                             constraint_scheduler,
                              max_epoch,
                              save_dir,
                              checkpoint_path,
@@ -34,9 +36,7 @@ class ConstraintTrainer(BaseTrainer):
                              num_batches,
                              *args,
                              **kwargs)
-        self.constraint = self._config['Constraints']['Constraint']
         self.num_samples = self._config['Constraints']['num_samples']
-        self.weight = self._config['Constraints']['cons_weight']
         self.rein_baseline = self._config['Constraints']['Rein_baseline']
         if self.constraint == "connectivity":
             self.credit_type = self._config['Constraints']['Connectivity']['credit_type']  # binary and discrete

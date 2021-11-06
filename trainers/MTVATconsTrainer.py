@@ -14,6 +14,7 @@ class ConstraintMTVATTrainer(BaseTrainer):
                  unlab_loader,
                  val_loader,
                  weight_scheduler,
+                 constraint_scheduler,
                  max_epoch,
                  save_dir,
                  checkpoint_path: str = None,
@@ -28,6 +29,7 @@ class ConstraintMTVATTrainer(BaseTrainer):
                              unlab_loader,
                              val_loader,
                              weight_scheduler,
+                             constraint_scheduler,
                              max_epoch,
                              save_dir,
                              checkpoint_path,
@@ -38,7 +40,6 @@ class ConstraintMTVATTrainer(BaseTrainer):
                              **kwargs)
         self.constraint = self._config['Constraints']['Constraint']
         self.num_samples = self._config['Constraints']['num_samples']
-        self.weight = self._config['Constraints']['cons_weight']
         self.rein_baseline = self._config['Constraints']['Rein_baseline']
         if self.constraint == "connectivity":
             self.credit_type = self._config['Constraints']['Connectivity']['credit_type']  # binary and discrete
@@ -51,7 +52,7 @@ class ConstraintMTVATTrainer(BaseTrainer):
         self.Cscale = self._config['Constraints']['Connectivity']['local_conn_Kernel']
         self.adexample = generateAD(eps=self._config['VATsettings']['pertur_eps'], temp=self.tmp,
                                     constraint=self.constraint,
-                                    num_samples=self.num_samples, consweight=self.weight,
+                                    num_samples=self.num_samples, consweight=self._cons_weight,
                                     rein_baseline=self.rein_baseline, reward_type=self.credit_type,
                                     Fscale=self.Fscale, Cscale=self.Cscale, my_connectivity=self.diag_connectivity)
         self.reinforce_cons_loss = reinforce_cons_loss(num_sample=self.num_samples, constraint=self.constraint,

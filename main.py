@@ -71,6 +71,7 @@ print(
 
 # hyper-parameters' scheduler
 RegScheduler = RampScheduler(**config["RegScheduler"])
+ConstraintWeightScheduler = RampScheduler(**config["ConstraintWeightScheduler"])
 
 # get the trainer
 Trainer_container = {
@@ -92,6 +93,7 @@ trainer = trainer_name(
     unlab_loader=unlab_loader,
     val_loader=val_loader,
     weight_scheduler=RegScheduler,
+    constraint_scheduler=ConstraintWeightScheduler,
     config=config,
     **config['Trainer']
 )

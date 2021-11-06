@@ -12,6 +12,7 @@ class MeanTeacherTrainer(BaseTrainer):
                  unlab_loader,
                  val_loader,
                  weight_scheduler,
+                 constraint_scheduler,
                  max_epoch,
                  save_dir,
                  checkpoint_path: str = None,
@@ -26,6 +27,7 @@ class MeanTeacherTrainer(BaseTrainer):
                              unlab_loader,
                              val_loader,
                              weight_scheduler,
+                             constraint_scheduler,
                              max_epoch,
                              save_dir,
                              checkpoint_path,
@@ -34,7 +36,6 @@ class MeanTeacherTrainer(BaseTrainer):
                              num_batches,
                              *args,
                              **kwargs)
-        self.weight = self._config['Constraints']['cons_weight']
         self._ce_criterion = SimplexCrossEntropyLoss()
 
     def _run_step(self, lab_data, unlab_data):

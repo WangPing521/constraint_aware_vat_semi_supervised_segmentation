@@ -29,6 +29,7 @@ class BaseTrainer(_Trainer):
             unlab_loader: Union[DataLoader, _BaseDataLoaderIter],
             val_loader: DataLoader,
             weight_scheduler: RampScheduler,
+            constraint_scheduler: RampScheduler,
             max_epoch: int = 100,
             save_dir: str = "base",
             checkpoint_path: str = None,
@@ -54,6 +55,7 @@ class BaseTrainer(_Trainer):
         self._unlab_loader = unlab_loader
         self._num_batches = num_batches
         self._weight_scheduler = weight_scheduler
+        self._constraint_scheduler = constraint_scheduler
         self.checkpoint_path = checkpoint_path
         self._entropy_criterion = Entropy()
         self._jsd_criterion = JSD_div()
@@ -61,7 +63,7 @@ class BaseTrainer(_Trainer):
         self.Fscale = self._config['Constraints']['Connectivity']['flood_fill_Kernel']
         self.Cscale = self._config['Constraints']['Connectivity']['local_conn_Kernel']
         self.report_constriant = metric_connectivity(Fscale=self.Fscale, Cscale=self.Cscale, run_state='val', my_connectivity=self._config['Constraints']['Connectivity'].get('diag_connectivity'))
-        self._cons_weight = self._config['Constraints']['cons_weight']
+        self._cons_weight = self._constraint_scheduler.value
 
     def register_meters(self, enable_drawer=True) -> None:
         super(BaseTrainer, self).register_meters()
@@ -91,6 +93,10 @@ class BaseTrainer(_Trainer):
         self._meter_interface.register_new_meter(
             "weight", AverageValueMeter(), group_name="train"
         )
+        self._meter_interface.register_new_meter(
+            "consweight", AverageValueMeter(), group_name="train"
+        )
+
         # validation
         self._meter_interface.register_new_meter(
             f"val_mean_non_conn", AverageValueMeter(), group_name="val"
@@ -287,12 +293,14 @@ class BaseTrainer(_Trainer):
         for segmentator in self._model:
             segmentator.schedulerStep()
         self._weight_scheduler.step()
+        self._constraint_scheduler.step()
 
     def _start_training(self):
         self.to(self._device)
         for epoch in range(self._start_epoch, self._max_epoch):
             self._meter_interface['lr'].add(self._model.get_lr()[0])
             self._meter_interface["weight"].add(self._weight_scheduler.value)
+            self._meter_interface["consweight"].add(self._cons_weight)
 
             self.train_loop(
                 lab_loader=self._lab_loader,

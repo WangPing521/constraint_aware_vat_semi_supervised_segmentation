@@ -13,6 +13,7 @@ class ConstraintVATTrainer(BaseTrainer):
                  unlab_loader,
                  val_loader,
                  weight_scheduler,
+                 constraint_scheduler,
                  max_epoch,
                  save_dir,
                  checkpoint_path: str = None,
@@ -27,6 +28,7 @@ class ConstraintVATTrainer(BaseTrainer):
                              unlab_loader,
                              val_loader,
                              weight_scheduler,
+                             constraint_scheduler,
                              max_epoch,
                              save_dir,
                              checkpoint_path,
@@ -37,7 +39,6 @@ class ConstraintVATTrainer(BaseTrainer):
                              **kwargs)
         self.constraint = self._config['Constraints']['Constraint']
         self.num_samples = self._config['Constraints']['num_samples']
-        self.weight = self._config['Constraints']['cons_weight']
         self.rein_baseline = self._config['Constraints']['Rein_baseline']
         if self.constraint == "connectivity":
             self.credit_type = self._config['Constraints']['Connectivity']['credit_type']  # binary and discrete
@@ -48,7 +49,7 @@ class ConstraintVATTrainer(BaseTrainer):
         self.tmp = self._config['VATsettings']['Temperature']
         self._ce_criterion = SimplexCrossEntropyLoss()
         self.cons_vatloss = consVATLoss(eps=self._config['VATsettings']['pertur_eps'], temp=self.tmp,
-                                        constraint=self.constraint, num_samples=self.num_samples, consweight=self.weight,
+                                        constraint=self.constraint, num_samples=self.num_samples, consweight=self._cons_weight,
                                         rein_baseline=self.rein_baseline, reward_type=self.credit_type,
                                         Fscale=self._config['Constraints']['Connectivity']['flood_fill_Kernel'],
                                         Cscale=self._config['Constraints']['Connectivity']['local_conn_Kernel'],
