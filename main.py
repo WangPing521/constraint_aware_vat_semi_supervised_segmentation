@@ -24,7 +24,7 @@ fix_all_seed(config['seed'])
 
 # model setting
 model1 = Model(config["Arch"], config["Optim"], config["Scheduler"])
-if config["Trainer"]["name"] in["Baselines", "NaiveVat", "consVat", "constraintReg", "consVat"]:
+if config["Trainer"]["name"] in["Baselines", "NaiveVat", "consVat", "constraintReg", "consVat", "Pseudolike"]:
     model = ModelList([model1])
 elif config["Trainer"]["name"] == "co_training" or config["Trainer"]["name"] == "cotconsVAT":
     model2 = Model(config["Arch"], config["Optim"], config["Scheduler"])
