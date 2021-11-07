@@ -63,7 +63,6 @@ class BaseTrainer(_Trainer):
         self.Fscale = self._config['Constraints']['Connectivity']['flood_fill_Kernel']
         self.Cscale = self._config['Constraints']['Connectivity']['local_conn_Kernel']
         self.report_constriant = metric_connectivity(Fscale=self.Fscale, Cscale=self.Cscale, run_state='val', my_connectivity=self._config['Constraints']['Connectivity'].get('diag_connectivity'))
-        self._cons_weight = self._constraint_scheduler.value
 
     def register_meters(self, enable_drawer=True) -> None:
         super(BaseTrainer, self).register_meters()
@@ -152,7 +151,7 @@ class BaseTrainer(_Trainer):
 
             if self._config['Trainer']['name'] in ["MeanTeacher", "MTconsvat"]:
                 with ZeroGradientBackwardStep(
-                        sup_loss + self._weight_scheduler.value * reg_loss + self._cons_weight * rein_cons,
+                        sup_loss + self._weight_scheduler.value * reg_loss + self._constraint_scheduler.value * rein_cons,
                         self._model[0]
                 ) as loss:
                     loss.backward()
@@ -161,7 +160,7 @@ class BaseTrainer(_Trainer):
                     ema_param.data.mul_(s_co).add_(1 - s_co, param.data)
             else:
                 with ZeroGradientBackwardStep(
-                        sup_loss + self._weight_scheduler.value * reg_loss + self._cons_weight * rein_cons,
+                        sup_loss + self._weight_scheduler.value * reg_loss + self._constraint_scheduler.value * rein_cons,
                         self._model
                 ) as loss:
                     loss.backward()
@@ -300,7 +299,7 @@ class BaseTrainer(_Trainer):
         for epoch in range(self._start_epoch, self._max_epoch):
             self._meter_interface['lr'].add(self._model.get_lr()[0])
             self._meter_interface["weight"].add(self._weight_scheduler.value)
-            self._meter_interface["consweight"].add(self._cons_weight)
+            self._meter_interface["consweight"].add(self._constraint_scheduler.value)
 
             self.train_loop(
                 lab_loader=self._lab_loader,

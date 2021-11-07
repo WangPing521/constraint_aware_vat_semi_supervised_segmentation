@@ -65,6 +65,6 @@ Constraints:
     flood_fill_Kernel: 5
     local_conn_Kernel: 3
   Convexity:
-    credit_types: defects # convex_hull, defects, pseudo_like_FG, pseudo_like_BG, reverse_FGBG
+    credit_types: convex_hull # convex_hull, defects, pseudo_like_FG, pseudo_like_BG, reverse_FGBG
 
 seed: 1234567

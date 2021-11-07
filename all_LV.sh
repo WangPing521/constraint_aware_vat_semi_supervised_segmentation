@@ -59,6 +59,9 @@ declare -a StringArray=(
 #"python -O main.py seed=1234567 Arch.num_classes=2 Dataset=acdc Foreground=LV Optim.lr=0.00001 Trainer.name=constraintReg Constraints.Constraint=convexity Constraints.Convexity.credit_types=reverse_FGBG Constraints.cons_weight=0.005    Trainer.save_dir=${save_dir}/convex_LV_FGBG_205cons Data.unlabeled_data_ratio=${unlab_ratio2} Data.labeled_data_ratio=${ratio2}"
 #"python -O main.py seed=1234567 Arch.num_classes=2 Dataset=acdc Foreground=LV Optim.lr=0.00001 Trainer.name=constraintReg Constraints.Constraint=convexity Constraints.Convexity.credit_types=reverse_FGBG Constraints.cons_weight=0.05     Trainer.save_dir=${save_dir}/convex_LV_FGBG_105cons Data.unlabeled_data_ratio=${unlab_ratio2} Data.labeled_data_ratio=${ratio2}"
 
+
+# need to be modified the weight, since i already revised it to a scheduler manner
+
 # EntMin_0.05
 "python -O main.py seed=1234567 Arch.num_classes=2 Dataset=acdc Foreground=LV Optim.lr=0.00001 Trainer.name=Baselines MinEntropy=True RegScheduler.max_value=0.0001 Trainer.save_dir=${save_dir}/EntMin_301reg Data.unlabeled_data_ratio=${unlab_ratio2} Data.labeled_data_ratio=${ratio2}"
 #"python -O main.py seed=123456 Arch.num_classes=2 Dataset=acdc Foreground=LV Optim.lr=0.00001 Trainer.name=Baselines MinEntropy=True Reg_cons=False Temperature=0.5 RegScheduler.max_value=0.0001 Trainer.save_dir=${save_dir}/EntMin_301reg_0.05Trun2 Data.unlabeled_data_ratio=${unlab_ratio2} Data.labeled_data_ratio=${ratio2}"

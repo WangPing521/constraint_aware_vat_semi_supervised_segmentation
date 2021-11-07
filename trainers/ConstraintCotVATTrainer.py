@@ -55,7 +55,7 @@ class ConstraintCotVATTrainer(BaseTrainer):
                                                        my_connectivity=self.diag_connectivity,
                                                        run_state='train', reward_type=self.credit_type, rein_baseline=self.rein_baseline)
         self.adexample = generateAD(eps=self._config['VATsettings']['pertur_eps'], temp=self.tmp, constraint=self.constraint,
-                                    num_samples=self.num_samples, consweight=self._cons_weight,
+                                    num_samples=self.num_samples, consweight=self._constraint_scheduler.value,
                                     rein_baseline=self.rein_baseline, reward_type=self.credit_type,
                                     Fscale=self._config['Constraints']['Connectivity']['flood_fill_Kernel'],
                                     Cscale=self._config['Constraints']['Connectivity']['local_conn_Kernel'],

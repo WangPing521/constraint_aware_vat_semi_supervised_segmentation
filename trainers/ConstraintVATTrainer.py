@@ -49,7 +49,7 @@ class ConstraintVATTrainer(BaseTrainer):
         self.tmp = self._config['VATsettings']['Temperature']
         self._ce_criterion = SimplexCrossEntropyLoss()
         self.cons_vatloss = consVATLoss(eps=self._config['VATsettings']['pertur_eps'], temp=self.tmp,
-                                        constraint=self.constraint, num_samples=self.num_samples, consweight=self._cons_weight,
+                                        constraint=self.constraint, num_samples=self.num_samples, consweight=self._constraint_scheduler.value,
                                         rein_baseline=self.rein_baseline, reward_type=self.credit_type,
                                         Fscale=self._config['Constraints']['Connectivity']['flood_fill_Kernel'],
                                         Cscale=self._config['Constraints']['Connectivity']['local_conn_Kernel'],
