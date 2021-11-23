@@ -41,7 +41,7 @@ def prob_sample(preds: Tensor, constraint='connectivity', reward_type='binary'):
         prob = torch.zeros_like(preds[:, 0, :, :]).to(device)
         if constraint == "connectivity":
             for i in range(preds.shape[1]):
-                mask_c = torch.where(sample_index == i, torch.Tensor([1]).to(device), torch.Tensor([0]).to(device))
+                mask_c = torch.where(sample_index == i, torch.Tensor([0]).to(device), torch.Tensor([1]).to(device))
                 prob = prob + mask_c * preds[:, i, :, :]
         elif constraint == "convexity":
             if reward_type == "convex_hull" or reward_type == "defects":
@@ -120,11 +120,17 @@ def connectivity_rewards(samples, fg_num, Fscale, Cscale, reward_type='binary', 
                 sc_nonzerobg = torch.where(S_fg_neigbors.float() == 0, torch.Tensor([-2]).to(device),
                                            S_fg_neigbors.float())
                 if reward_type == 'binary':
-                    per_c_rewards = (fc_nonzerobg == sc_nonzerobg).float().transpose(1, 0)
+                    per_c_rewards_tmp = (fc_nonzerobg == sc_nonzerobg).float().transpose(1, 0)
+                    per_c_rewards = (fg - per_c_rewards_tmp) - per_c_rewards_tmp
+
                 elif reward_type == 'discretecontinuous':
                     S_fg_neigbors1 = torch.where(S_fg_neigbors.float() == 0, torch.Tensor([1]).to(device),
                                 S_fg_neigbors.float())
-                    per_c_rewards = (F_fg_neigbors / S_fg_neigbors1).transpose(1,0)
+                    per_c_rewards_tmp = -(F_fg_neigbors / S_fg_neigbors1).transpose(1,0)
+
+                    sub_per_c_rewards = (fc_nonzerobg == sc_nonzerobg).float().transpose(1, 0)
+                    per_c_rewards = (fg - sub_per_c_rewards) + per_c_rewards_tmp
+
             else:
                 per_c_rewards = fill_connect
 
@@ -186,9 +192,13 @@ def metric_convexity(x: Tensor):
         convex_hull = (torch.zeros_like(x[i].squeeze(0))).cpu().numpy().astype(dtype=np.float32)
         try:
             cnt_max = contours[np.argsort(-np.array(regions))[0]]
+            max_id = np.argsort(-np.array(regions))[0]
+
             hull = cv2.convexHull(cnt_max)
 
-            cv2.fillConvexPoly(convex_contour, cnt_max, (255, 0, 255))
+            # cv2.fillConvexPoly(convex_contour, cnt_max, (255, 0, 255))
+            convex_contour = cv2.drawContours(convex_contour, contours, max_id, 1, cv2.FILLED)
+
             convex_contour = (torch.Tensor(convex_contour) / 255).to(device)
 
             cv2.fillConvexPoly(convex_hull, hull, (255, 0, 255))

@@ -35,7 +35,7 @@ Trainer:
   save_dir: runs
   num_batches: 200
   max_epoch: 100  # 50, 100
-  checkpoint_path: runs
+  checkpoint_path: runs/runs
 
 RegScheduler:
   begin_epoch: 5
@@ -61,10 +61,10 @@ Constraints:
   Rein_baseline: False # reinforce with baseline
   Connectivity:
     diag_connectivity: 1 # exclude diag
-    credit_type: binary # binary, discrete
+    credit_type: binary # binary, discretecontinuous
     flood_fill_Kernel: 5
     local_conn_Kernel: 3
   Convexity:
-    credit_types: convex_hull # convex_hull, defects, pseudo_like_FG, pseudo_like_BG, reverse_FGBG
+    credit_types: reverse_FGBG # convex_hull, defects, pseudo_like_FG, pseudo_like_BG, reverse_FGBG
 
 seed: 1234567
