@@ -35,7 +35,7 @@ Trainer:
   save_dir: runs
   num_batches: 200
   max_epoch: 100  # 50, 100
-  checkpoint_path: runs/runs
+  checkpoint_path: runs
 
 RegScheduler:
   begin_epoch: 5
