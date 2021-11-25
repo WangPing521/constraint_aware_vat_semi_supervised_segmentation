@@ -61,7 +61,7 @@ Constraints:
   Rein_baseline: False # reinforce with baseline
   Connectivity:
     diag_connectivity: 1 # exclude diag
-    credit_type: binary # binary, discretecontinuous
+    credit_type: discretecontinuous # binary, discretecontinuous
     flood_fill_Kernel: 5
     local_conn_Kernel: 3
   Convexity:
