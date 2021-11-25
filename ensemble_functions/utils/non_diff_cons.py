@@ -39,23 +39,27 @@ def prob_sample(preds: Tensor, constraint='connectivity', reward_type='binary'):
 
         # probability map and reward
         prob = torch.zeros_like(preds[:, 0, :, :]).to(device)
-        if constraint == "connectivity":
-            for i in range(preds.shape[1]):
-                mask_c = torch.where(sample_index == i, torch.Tensor([0]).to(device), torch.Tensor([1]).to(device))
-                prob = prob + mask_c * preds[:, i, :, :]
-        elif constraint == "convexity":
-            if reward_type == "convex_hull" or reward_type == "defects":
-                for i in range(preds.shape[1]):
-                    mask_c = torch.where(sample_index == i, torch.Tensor([1]).to(device), torch.Tensor([0]).to(device))
-                    prob = prob + mask_c * preds[:, i, :, :]
-            elif reward_type == "pseudo_like_FG":
-                prob = preds[:, 1, :, :]
-            elif reward_type == "pseudo_like_BG":
-                prob = preds[:, 0, :, :]
-            elif reward_type == "reverse_FGBG":
-                for i in range(preds.shape[1]):
-                    mask_c = torch.where(sample_index == i, torch.Tensor([0]).to(device), torch.Tensor([1]).to(device))
-                    prob = prob + mask_c * preds[:, i, :, :]
+        for i in range(preds.shape[1]):
+            mask_c = torch.where(sample_index == i, torch.Tensor([1]).to(device), torch.Tensor([0]).to(device))
+            prob = prob + mask_c * preds[:, i, :, :]
+        prob = 1- prob
+        # if constraint == "connectivity":
+        #     for i in range(preds.shape[1]):
+        #         mask_c = torch.where(sample_index == i, torch.Tensor([0]).to(device), torch.Tensor([1]).to(device))
+        #         prob = prob + mask_c * preds[:, i, :, :]
+        # elif constraint == "convexity":
+        #     if reward_type == "convex_hull" or reward_type == "defects":
+        #         for i in range(preds.shape[1]):
+        #             mask_c = torch.where(sample_index == i, torch.Tensor([1]).to(device), torch.Tensor([0]).to(device))
+        #             prob = prob + mask_c * preds[:, i, :, :]
+        #     elif reward_type == "pseudo_like_FG":
+        #         prob = preds[:, 1, :, :]
+        #     elif reward_type == "pseudo_like_BG":
+        #         prob = preds[:, 0, :, :]
+        #     elif reward_type == "reverse_FGBG":
+        #         for i in range(preds.shape[1]):
+        #             mask_c = torch.where(sample_index == i, torch.Tensor([0]).to(device), torch.Tensor([1]).to(device))
+        #             prob = prob + mask_c * preds[:, i, :, :]
 
         if i_dx == 0:
             prob_ns = prob.unsqueeze(1)
@@ -199,7 +203,7 @@ def metric_convexity(x: Tensor):
             # cv2.fillConvexPoly(convex_contour, cnt_max, (255, 0, 255))
             convex_contour = cv2.drawContours(convex_contour, contours, max_id, 1, cv2.FILLED)
 
-            convex_contour = (torch.Tensor(convex_contour) / 255).to(device)
+            convex_contour = (torch.Tensor(convex_contour)).to(device)
 
             cv2.fillConvexPoly(convex_hull, hull, (255, 0, 255))
             convex_hull = (torch.Tensor(convex_hull) / 255).to(device)
