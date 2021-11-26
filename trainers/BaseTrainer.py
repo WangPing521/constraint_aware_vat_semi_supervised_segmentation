@@ -304,11 +304,11 @@ class BaseTrainer(_Trainer):
             self._meter_interface["weight"].add(self._weight_scheduler.value)
             self._meter_interface["consweight"].add(self._constraint_scheduler.value)
 
-            # self.train_loop(
-            #     lab_loader=self._lab_loader,
-            #     unlab_loader=self._unlab_loader,
-            #     epoch=epoch
-            # )
+            self.train_loop(
+                lab_loader=self._lab_loader,
+                unlab_loader=self._unlab_loader,
+                epoch=epoch
+            )
             with torch.no_grad():
                 current_score = self.eval_loop(self._val_loader, epoch)
 
