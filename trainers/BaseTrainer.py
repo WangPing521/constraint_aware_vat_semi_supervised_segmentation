@@ -265,7 +265,10 @@ class BaseTrainer(_Trainer):
 
 
         self._meter_interface[f'val_mean_non_conn'].add((sum((avg_cn_reward/count))/avg_cn_reward.shape[0]).cpu())
-        self._meter_interface[f'val_mean_non_conv'].add((avg_cv_reward/count).cpu())
+        try:
+            self._meter_interface[f'val_mean_non_conv'].add((avg_cv_reward/count).cpu())
+        except:
+            self._meter_interface[f'val_mean_non_conv'].add((torch.Tensor([avg_cv_reward])/count).cpu())
 
         for i in range(self._config['Arch']['num_classes']-1):
             if self.constraint == "connectivity":
@@ -301,11 +304,11 @@ class BaseTrainer(_Trainer):
             self._meter_interface["weight"].add(self._weight_scheduler.value)
             self._meter_interface["consweight"].add(self._constraint_scheduler.value)
 
-            self.train_loop(
-                lab_loader=self._lab_loader,
-                unlab_loader=self._unlab_loader,
-                epoch=epoch
-            )
+            # self.train_loop(
+            #     lab_loader=self._lab_loader,
+            #     unlab_loader=self._unlab_loader,
+            #     epoch=epoch
+            # )
             with torch.no_grad():
                 current_score = self.eval_loop(self._val_loader, epoch)
 
