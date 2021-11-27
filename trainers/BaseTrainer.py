@@ -273,18 +273,16 @@ class BaseTrainer(_Trainer):
         for i in range(self._config['Arch']['num_classes']-1):
             if self.constraint == "connectivity":
                 self._meter_interface[f'val_c{i}non_con'].add((avg_cn_reward[i] / count).cpu())
-            else:
-                try:
-                    self._meter_interface[f'val_c0non_con'].add((avg_cv_reward / count).cpu())
-                except:
-                    self._meter_interface[f'val_c0non_con'].add((torch.Tensor([avg_cv_reward])/count).cpu())
+
         report_statue = self._meter_interface.tracking_status("val")
         val_indicator.set_postfix(flatten_dict(report_statue))
         self.writer.add_scalar_with_tag(
             "val", flatten_dict(report_statue), global_step=epoch
         )
-
-        print(f"Val_Epoch {epoch}: {nice_dict(flatten_dict(report_statue))}")
+        try:
+            print(f"Val_Epoch {epoch}: {nice_dict(flatten_dict(report_statue))}")
+        except:
+            print(report_statue)
 
         return average_list(
             [
