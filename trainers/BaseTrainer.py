@@ -186,8 +186,10 @@ class BaseTrainer(_Trainer):
                 for i in range(self._config['Arch']['num_classes']-1):
                     self._meter_interface[f'train_c{i}non_con'].add((sum_disc[i] / count).cpu())
             else:
-                self._meter_interface[f'train_c0non_con'].add((sum_disc / count).cpu())
-
+                try:
+                    self._meter_interface[f'train_c0non_con'].add((sum_disc / count).cpu())
+                except:
+                    self._meter_interface[f'train_c0non_con'].add((torch.Tensor([sum_disc]) / count).cpu())
         report_statue = self._meter_interface.tracking_status("train")
         batch_indicator.set_postfix(flatten_dict(report_statue))
         self.writer.add_scalar_with_tag(
