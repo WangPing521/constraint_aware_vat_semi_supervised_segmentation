@@ -195,8 +195,10 @@ class BaseTrainer(_Trainer):
         self.writer.add_scalar_with_tag(
             "train", flatten_dict(report_statue), global_step=epoch
         )
-        print(f"Training Epoch {epoch}: {nice_dict(flatten_dict(report_statue))}")
-
+        try:
+            print(f"Training Epoch {epoch}: {nice_dict(flatten_dict(report_statue))}")
+        except:
+            print(report_statue)
     def _eval_loop(
         self,
         val_loader: Union[DataLoader, _BaseDataLoaderIter] = None,
