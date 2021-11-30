@@ -249,10 +249,11 @@ class BaseTrainer(_Trainer):
 
 
             non_connect = self.report_constriant(ensemble, target)
-            non_convex, val_hull, val_contour = metric_convexity(ensemble.max(1)[1])
+            if self.constraint == "convexity":
+                non_convex, val_hull, val_contour = metric_convexity(ensemble.max(1)[1])
+                avg_cv_reward = avg_cv_reward + non_convex
 
             avg_cn_reward = avg_cn_reward + non_connect
-            avg_cv_reward = avg_cv_reward + non_convex
             count = count + 1
 
             self._meter_interface[f"ensemble_dice"].add(
