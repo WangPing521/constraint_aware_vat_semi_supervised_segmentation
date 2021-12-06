@@ -14,13 +14,13 @@ Scheduler:
     multiplier: 300
     total_epoch: 10
 
-Dataset: acdc # acdc, prostate, spleen, prostateDK
+Dataset: prostate # acdc, prostate, spleen, prostateDK
 Foreground: LV # LV, Myo, RV, all
 
 Data:
   unlabeled_data_ratio: 0.95
   labeled_data_ratio: 0.05
-  seed: 1
+  seed: 12
 
 DataLoader:
   labeled_batch_size: 4
@@ -30,7 +30,7 @@ DataLoader:
   num_workers: 0
 
 Trainer:
-  name: constraintReg  # Baselines, NaiveVat, co_training, MeanTeacher, constraintReg, consVat, cotconsVAT, MTconsvat, Pseudolike
+  name: NaiveVat  # Baselines, NaiveVat, co_training, MeanTeacher, constraintReg, consVat, cotconsVAT, MTconsvat, Pseudolike
   device: cuda
   save_dir: runs
   num_batches: 200
@@ -56,7 +56,7 @@ VATsettings:
   Temperature: 1
 
 Constraints:
-  Constraint: convexity  # connectivity, convexity
+  Constraint: connectivity  # connectivity, convexity
   num_samples: 10
   Rein_baseline: False # reinforce with baseline
   Connectivity:
