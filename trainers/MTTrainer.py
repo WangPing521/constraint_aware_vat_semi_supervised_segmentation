@@ -49,20 +49,20 @@ class MeanTeacherTrainer(BaseTrainer):
             unlab_data[0][0].to(self._device),
             unlab_data[0][1].to(self._device),
         )
+        if self._config['Dataset'] == "acdc":
+            # test on the task of binary segmentation
+            # bg: 0     RV: 1     MYO: 2    LV: 3
+            if self._config['Foreground'] == 'LV':
+                target = torch.where(target == 3, torch.Tensor([1]).to(self._device), torch.Tensor([0]).to(self._device))
+                utarget = torch.where(utarget == 3, torch.Tensor([1]).to(self._device), torch.Tensor([0]).to(self._device))
 
-        # test on the task of binary segmentation
-        # bg: 0     RV: 1     MYO: 2    LV: 3
-        if self._config['Foreground'] == 'LV':
-            target = torch.where(target == 3, torch.Tensor([1]).to(self._device), torch.Tensor([0]).to(self._device))
-            utarget = torch.where(utarget == 3, torch.Tensor([1]).to(self._device), torch.Tensor([0]).to(self._device))
+            elif self._config['Foreground'] == 'RV':
+                target = torch.where(target == 1, torch.Tensor([1]).to(self._device), torch.Tensor([0]).to(self._device))
+                utarget = torch.where(utarget == 1, torch.Tensor([1]).to(self._device), torch.Tensor([0]).to(self._device))
 
-        elif self._config['Foreground'] == 'RV':
-            target = torch.where(target == 1, torch.Tensor([1]).to(self._device), torch.Tensor([0]).to(self._device))
-            utarget = torch.where(utarget == 1, torch.Tensor([1]).to(self._device), torch.Tensor([0]).to(self._device))
-
-        elif self._config['Foreground'] == 'Myo':
-            target = torch.where(target == 2, torch.Tensor([1]).to(self._device), torch.Tensor([0]).to(self._device))
-            utarget = torch.where(utarget == 2, torch.Tensor([1]).to(self._device), torch.Tensor([0]).to(self._device))
+            elif self._config['Foreground'] == 'Myo':
+                target = torch.where(target == 2, torch.Tensor([1]).to(self._device), torch.Tensor([0]).to(self._device))
+                utarget = torch.where(utarget == 2, torch.Tensor([1]).to(self._device), torch.Tensor([0]).to(self._device))
 
         onehot_target = class2one_hot(
             target.squeeze(1), self._config['Arch']['num_classes']
