@@ -149,7 +149,7 @@ def convexity_descriptor(x: Tensor, reward_type='hard'):
         hard_rewards = torch.cat([hard_rewards, rewards.unsqueeze(0)], dim=0)
         #todo conv / k^2
         kernel = torch.ones(1, 1, 3, 3)
-        kernel = torch.FloatTensor(kernel)
+        kernel = torch.FloatTensor(kernel).to(device)
         rewards_soft = F.conv2d(rewards.unsqueeze(0).transpose(1,0), kernel, padding=int((3 - 1) / 2)).transpose(1,0) * rewards.unsqueeze(0)
         soft_rewards = torch.cat([soft_rewards, rewards_soft / 9], dim=0)
 
