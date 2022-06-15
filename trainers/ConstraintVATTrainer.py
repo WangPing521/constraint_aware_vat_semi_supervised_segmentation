@@ -39,18 +39,15 @@ class ConstraintVATTrainer(BaseTrainer):
                              **kwargs)
         self.constraint = self._config['Constraints']['Constraint']
         self.num_samples = self._config['Constraints']['num_samples']
-        self.rein_baseline = self._config['Constraints']['Rein_baseline']
-        if self.constraint == "connectivity":
-            self.credit_type = self._config['Constraints']['Connectivity']['credit_type']  # binary and discrete
-        else:
-            self.credit_type = self._config['Constraints']['Convexity']['credit_types']  #  convex_hull, defects, pseudo_like_FG, pseudo_like_BG, reverse_FGBG
+        self.reward_type = self._config['Constraints']['reward_type']  # binary and discrete
+        self.reverse = self._config['Constraints']['reverse_indicator'] # FGBG or reversed FGBG
 
         self.diag_connectivity = self._config['Constraints']['Connectivity']['diag_connectivity']
         self.tmp = self._config['VATsettings']['Temperature']
         self._ce_criterion = SimplexCrossEntropyLoss()
         self.cons_vatloss = consVATLoss(eps=self._config['VATsettings']['pertur_eps'], temp=self.tmp,
                                         constraint=self.constraint, num_samples=self.num_samples, consweight=self._constraint_scheduler.value,
-                                        rein_baseline=self.rein_baseline, reward_type=self.credit_type,
+                                        reward_type=self.reward_type, reverse_indicator=self.reverse,
                                         Fscale=self._config['Constraints']['Connectivity']['flood_fill_Kernel'],
                                         Cscale=self._config['Constraints']['Connectivity']['local_conn_Kernel'],
                                         my_connectivity=self.diag_connectivity)

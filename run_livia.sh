@@ -12,4 +12,4 @@ declare -a StringArray=(
 "python -O main.py seed=321 Arch.num_classes=3 Dataset=prostateDK Foreground=all Trainer.name=constraintReg Constraints.Constraint=connectivity Constraints.Connectivity.credit_type=discretecontinuous ConstraintWeightScheduler.max_value=0.00005 Trainer.checkpoint_path=runs/${save_dir}/cons_405reg_run3 Trainer.save_dir=${save_dir}/cons_405reg_run3 Data.unlabeled_data_ratio=${unlab_ratio1} Data.labeled_data_ratio=${ratio1}"
 
 )
-gpuqueue "${StringArray[@]}" --available_gpus 2 3
+gpuqueue "${StringArray[@]bash }" --available_gpus 2 3

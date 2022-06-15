@@ -14,7 +14,7 @@ Scheduler:
     multiplier: 300
     total_epoch: 10
 
-Dataset: prostate # acdc, prostate, spleen, prostateDK
+Dataset: acdc # acdc, prostate, spleen, prostateDK
 Foreground: LV # LV, Myo, RV, all
 
 Data:
@@ -28,9 +28,10 @@ DataLoader:
   val_batch_size: 6
   shuffle: True
   num_workers: 0
+  pin_memory: False
 
 Trainer:
-  name: NaiveVat  # Baselines, NaiveVat, co_training, MeanTeacher, constraintReg, consVat, cotconsVAT, MTconsvat, Pseudolike
+  name: consVat  # Baselines, NaiveVat, co_training, MeanTeacher, constraintReg, consVat, cotconsVAT, MTconsvat, Pseudolike
   device: cuda
   save_dir: runs
   num_batches: 200
@@ -56,15 +57,13 @@ VATsettings:
   Temperature: 1
 
 Constraints:
-  Constraint: connectivity  # connectivity, convexity
+  Constraint: convexity  # connectivity, convexity
   num_samples: 10
-  Rein_baseline: False # reinforce with baseline
+  reward_type: soft # hard, soft
+  reverse_indicator: True # False: FGBG; True: reverse_FGBG
   Connectivity:
     diag_connectivity: 1 # exclude diag
-    credit_type: discretecontinuous # binary, discretecontinuous
     flood_fill_Kernel: 5
     local_conn_Kernel: 3
-  Convexity:
-    credit_types: reverse_FGBG # convex_hull, defects, pseudo_like_FG, pseudo_like_BG, reverse_FGBG
 
 seed: 1234567

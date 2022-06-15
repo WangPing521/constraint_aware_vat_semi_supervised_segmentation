@@ -291,8 +291,8 @@ def count_param(model):
 if __name__ == '__main__':
     print('#### Test Case ###')
     from torch.autograd import Variable
-    x = Variable(torch.rand(1, 3, 256, 256))
-    model = Enet(3,4)
+    x = Variable(torch.rand(1, 1, 256, 256))
+    model = Enet(1,2)
     param = count_param(model)
     y = model(x)
     print('Output shape:',y.shape)

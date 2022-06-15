@@ -7,26 +7,25 @@ from torch import Tensor
 import cv2
 from ensemble_functions.utils.independent_functions import average_list
 
-device = 'cuda'
+device = 'cpu'
 
 # samples and probability map
-def prob_sample(preds: Tensor, constraint='connectivity', reward_type='binary'):
+def prob_sample(preds: Tensor, reverse_indicator=False):
     # multinomial sampling
     n, c, h, w = preds.shape
     c_views = preds.view(n, c, h * w)
     c_reviews = c_views.transpose(2, 1)
 
     # sampling 10 times for each image and save into a list
+    prob_ns, sample_ns = [], []
     for i_dx in range(10):
         img_list = []
         for n_img in c_reviews:
-            # try:
             view_index = torch.multinomial(n_img, 1)
-            # except:
-            #     print('nan values:', torch.sum(torch.isnan(n_img)).item())
             img_list.append(view_index)
 
         # transfer a list into a n channel tensor
+        view_indexes = []
         for i in range(len(img_list)):
             if i == 0:
                 view_indexes = img_list[i].unsqueeze(0)
@@ -42,35 +41,22 @@ def prob_sample(preds: Tensor, constraint='connectivity', reward_type='binary'):
         for i in range(preds.shape[1]):
             mask_c = torch.where(sample_index == i, torch.Tensor([1]).to(device), torch.Tensor([0]).to(device))
             prob = prob + mask_c * preds[:, i, :, :]
-        prob = 1- prob
-        # if constraint == "connectivity":
-        #     for i in range(preds.shape[1]):
-        #         mask_c = torch.where(sample_index == i, torch.Tensor([0]).to(device), torch.Tensor([1]).to(device))
-        #         prob = prob + mask_c * preds[:, i, :, :]
-        # elif constraint == "convexity":
-        #     if reward_type == "convex_hull" or reward_type == "defects":
-        #         for i in range(preds.shape[1]):
-        #             mask_c = torch.where(sample_index == i, torch.Tensor([1]).to(device), torch.Tensor([0]).to(device))
-        #             prob = prob + mask_c * preds[:, i, :, :]
-        #     elif reward_type == "pseudo_like_FG":
-        #         prob = preds[:, 1, :, :]
-        #     elif reward_type == "pseudo_like_BG":
-        #         prob = preds[:, 0, :, :]
-        #     elif reward_type == "reverse_FGBG":
-        #         for i in range(preds.shape[1]):
-        #             mask_c = torch.where(sample_index == i, torch.Tensor([0]).to(device), torch.Tensor([1]).to(device))
-        #             prob = prob + mask_c * preds[:, i, :, :]
+
+        if reverse_indicator:
+            rein_prob = 1- prob
+        else:
+            rein_prob = prob
 
         if i_dx == 0:
-            prob_ns = prob.unsqueeze(1)
+            prob_ns = rein_prob.unsqueeze(1)
             sample_ns = sample_index.unsqueeze(1)
         else:
-            prob_ns = torch.cat([prob_ns, prob.unsqueeze(1)], dim=1)
+            prob_ns = torch.cat([prob_ns, rein_prob.unsqueeze(1)], dim=1)
             sample_ns = torch.cat([sample_ns, sample_index.unsqueeze(1)], dim=1)
     return prob_ns, sample_ns  # [n,c,h,w] n: the number of images c: number of samples
 
 # connectivity rewards
-def connectivity_rewards(samples, fg_num, Fscale, Cscale, reward_type='binary', my_connectivity=None, run_state='train'):
+def connectivity_rewards(samples, fg_num, Fscale, Cscale, reward_type='hard', my_connectivity=None, run_state='train'):
     kernel = torch.ones(1, 1, Fscale, Fscale)
     kernel = torch.FloatTensor(kernel)
     weight = nn.Parameter(data=kernel, requires_grad=False).to(device)
@@ -123,11 +109,11 @@ def connectivity_rewards(samples, fg_num, Fscale, Cscale, reward_type='binary', 
                                            F_fg_neigbors.float())
                 sc_nonzerobg = torch.where(S_fg_neigbors.float() == 0, torch.Tensor([-2]).to(device),
                                            S_fg_neigbors.float())
-                if reward_type == 'binary':
+                if reward_type == 'hard':
                     per_c_rewards_tmp = (fc_nonzerobg == sc_nonzerobg).float().transpose(1, 0)
                     per_c_rewards = (fg - per_c_rewards_tmp) - per_c_rewards_tmp
 
-                elif reward_type == 'discretecontinuous':
+                elif reward_type == 'soft':
                     S_fg_neigbors1 = torch.where(S_fg_neigbors.float() == 0, torch.Tensor([1]).to(device),
                                 S_fg_neigbors.float())
                     per_c_rewards_tmp = -(F_fg_neigbors / S_fg_neigbors1).transpose(1,0)
@@ -151,38 +137,29 @@ def connectivity_rewards(samples, fg_num, Fscale, Cscale, reward_type='binary', 
     return C_rewards
 
 # convexity reward
-def convexity_descriptor(x: Tensor, cons_types='convex_hull'):
+def convexity_descriptor(x: Tensor, reward_type='hard'):
     b, c, h, w = x.shape
-    hull_rewards = torch.randn(1,c,h,w).to(device)
-    defects_rewards = torch.randn(1,c,h,w).to(device)
-    pseudo_like_FG_rewards = torch.randn(1,c,h,w).to(device)
-    pseudo_like_BG_rewards = torch.randn(1,c,h,w).to(device)
-    reverse_FGBG_rewards = torch.randn(1,c,h,w).to(device)
+    hard_rewards = torch.randn(1,c,h,w).to(device)
+    soft_rewards = torch.randn(1,c,h,w).to(device)
 
     for sample in range(b):
-        non_conv, convex_hull, convex_contour = metric_convexity(x[sample])
-        hull_rewards = torch.cat([hull_rewards, convex_contour-(convex_hull - convex_contour).unsqueeze(0)], dim=0)
-        defects_rewards = torch.cat([defects_rewards, -(convex_hull - convex_contour).unsqueeze(0)], dim=0)
-        pseudo_like_FG_rewards = torch.cat([pseudo_like_FG_rewards, convex_hull.unsqueeze(0)], dim=0)
-        pseudo_like_BG_rewards = torch.cat([pseudo_like_BG_rewards, (-convex_hull).unsqueeze(0)], dim=0)
-        reverse_FGBG_rewards = torch.cat([reverse_FGBG_rewards, ((convex_hull - convex_contour)-convex_contour).unsqueeze(0)], dim=0)
+        non_conv, convex_hull, fg_contour = metric_convexity(x[sample])
+        defects = (convex_hull - fg_contour) + 1
+        rewards = torch.where(defects == 2, torch.tensor([0.0]).to(device), defects)
+        hard_rewards = torch.cat([hard_rewards, rewards.unsqueeze(0)], dim=0)
+        #todo conv / k^2
+        kernel = torch.ones(1, 1, 3, 3)
+        kernel = torch.FloatTensor(kernel)
+        rewards_soft = F.conv2d(rewards.unsqueeze(0).transpose(1,0), kernel, padding=int((3 - 1) / 2)).transpose(1,0) * rewards.unsqueeze(0)
+        soft_rewards = torch.cat([soft_rewards, rewards_soft / 9], dim=0)
 
-    hull_rewards = hull_rewards[1:11, :, :, :]
-    defects_rewards = defects_rewards[1:11, :, :, :]
-    pseudo_like_FG_rewards = pseudo_like_FG_rewards[1:11, :, :, :]
-    pseudo_like_BG_rewards = pseudo_like_BG_rewards[1:11, :, :, :]
-    reverse_FGBG_rewards = reverse_FGBG_rewards[1:11, :, :, :]
+    hard_rewards = hard_rewards[1:11, :, :, :]
+    soft_rewards = soft_rewards[1:11, :, :, :]
 
-    if cons_types == 'convex_hull':
-        return hull_rewards
-    elif cons_types == 'defects':
-        return defects_rewards
-    elif cons_types == "pseudo_like_FG":
-        return pseudo_like_FG_rewards
-    elif cons_types == "pseudo_like_BG":
-        return pseudo_like_BG_rewards
-    elif cons_types == "reverse_FGBG":
-        return reverse_FGBG_rewards
+    if reward_type == 'hard':
+        return hard_rewards
+    elif reward_type == "soft":
+        return soft_rewards
 
 # convexity metric
 def metric_convexity(x: Tensor):
@@ -295,34 +272,33 @@ class metric_connectivity(nn.Module):
 
 # reinforced constraint loss
 class reinforce_cons_loss(nn.Module):
-    def __init__(self, num_sample=10, constraint='connectivity', Fscale=5, Cscale=3, reward_type='binary',
-                 my_connectivity=None, rein_baseline=False, run_state='train'):
+    def __init__(self, num_sample=10, constraint='connectivity', Fscale=5, Cscale=3, reward_type='hard', reverse_indicator=False,
+                 my_connectivity=None, run_state='train'):
         super().__init__()
         self._num = num_sample
         self._constraint = constraint
         self._Fscale = Fscale
         self._Cscale = Cscale
         self._reward_type = reward_type
-        self.rein_baseline = rein_baseline
+        self.reverse = reverse_indicator
         self._my_connectivity = my_connectivity
         self._run_state = run_state
 
     def forward(self, prob: Tensor, **kwargs) -> Tensor:
-        probs, samples = prob_sample(prob, constraint=self._constraint, reward_type=self._reward_type)
+        probs, samples = prob_sample(prob, reverse_indicator=self.reverse)
         if self._constraint == "connectivity":
             fg_num = prob.shape[1]  # fg_num: the number of classes
             C_rewards = connectivity_rewards(samples=samples, fg_num=fg_num, Fscale=self._Fscale, Cscale=self._Cscale,
                                              reward_type=self._reward_type, my_connectivity=self._my_connectivity, run_state=self._run_state)
         elif self._constraint == "convexity":
             samples = samples.transpose(1, 0)
-            C_rewards = convexity_descriptor(samples, cons_types=self._reward_type)
+            C_rewards = convexity_descriptor(samples, reward_type=self._reward_type)
             C_rewards = C_rewards.transpose(1, 0)
         assert probs.shape == C_rewards.shape
-        if self.rein_baseline:
-            avg_reward = ((1 / C_rewards.shape[1]) * C_rewards.sum(dim=1)).unsqueeze(1)
-            cons_loss = (- (C_rewards - avg_reward) * torch.log(probs + 1e-6)).mean()
-        else:
-            cons_loss = (- C_rewards * torch.log(probs + 1e-6)).mean()
+
+        # avg_reward = ((1 / C_rewards.transpose(1, 0).shape[1]) * C_rewards.transpose(1, 0).sum(dim=1)).unsqueeze(1)
+        avg_reward = 0.5
+        cons_loss = ((C_rewards - avg_reward) * torch.log(probs + 1e-6)).mean()
 
         return cons_loss
 
