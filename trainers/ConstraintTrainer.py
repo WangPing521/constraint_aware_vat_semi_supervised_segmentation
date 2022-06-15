@@ -37,12 +37,7 @@ class ConstraintTrainer(BaseTrainer):
                              *args,
                              **kwargs)
         self.num_samples = self._config['Constraints']['num_samples']
-        self.rein_baseline = self._config['Constraints']['Rein_baseline']
-        if self.constraint == "connectivity":
-            self.credit_type = self._config['Constraints']['Connectivity']['credit_type']  # binary and discrete
-        else:
-            self.credit_type = self._config['Constraints']['Convexity'][
-                'credit_types']  # convex_hull, defects, pseudo_like_FG, pseudo_like_BG, reverse_FGBG
+        self.reward_type = self._config['Constraints']['reward_type']  # binary and discrete
 
         self.diag_connectivity = self._config['Constraints']['Connectivity']['diag_connectivity']
         self._tmp = self._config['VATsettings']['Temperature']
@@ -50,10 +45,9 @@ class ConstraintTrainer(BaseTrainer):
         self.Cscale = self._config['Constraints']['Connectivity']['local_conn_Kernel']
         self._ce_criterion = SimplexCrossEntropyLoss()
         self.reinforce_cons_loss = reinforce_cons_loss(num_sample=self.num_samples, constraint=self.constraint,
-                                                   Fscale=self.Fscale,
-                                                   Cscale=self.Cscale,
-                                                   reward_type=self.credit_type, my_connectivity=self.diag_connectivity,
-                                                   rein_baseline=self.rein_baseline)
+                                                   Fscale=self.Fscale, Cscale=self.Cscale,
+                                                   reward_type=self.reward_type, my_connectivity=self.diag_connectivity,
+                                                   )
         self.metric_connectivity=metric_connectivity(Fscale=self.Fscale, Cscale=self.Cscale, my_connectivity=self.diag_connectivity)
 
     def _run_step(self, lab_data, unlab_data):

@@ -12,7 +12,7 @@ from ensemble_functions.utils.non_diff_cons import reinforce_cons_loss
 class generateAD(nn.Module):
     def __init__(
             self, xi=10.0, eps=1.0, ip=2, temp=1, distance_func=KL_div(), constraint='connectivity', num_samples=10, consweight=0.5,
-            rein_baseline =False, reward_type="binary", Fscale=5, Cscale=3, my_connectivity=None
+            reward_type="hard", Fscale=5, Cscale=3, my_connectivity=None
     ):
         super(generateAD, self).__init__()
         self.xi = xi
@@ -23,14 +23,13 @@ class generateAD(nn.Module):
         self.constraint = constraint
         self.num_samples = num_samples
         self.consweight = consweight
-        self.rein_baseline = rein_baseline
         self.reward_type = reward_type
         self.Fscale = Fscale
         self.Cscale = Cscale
         self.my_connectivity = my_connectivity
         self.reinforce_cons_loss = reinforce_cons_loss(num_sample=self.num_samples, constraint=self.constraint, Fscale=self.Fscale,
                                                        Cscale=self.Cscale, reward_type=self.reward_type,
-                                                       my_connectivity=self.my_connectivity, rein_baseline=self.rein_baseline)
+                                                       my_connectivity=self.my_connectivity)
         self.temp = temp
 
     def forward(self, model, x: torch.Tensor, pred):

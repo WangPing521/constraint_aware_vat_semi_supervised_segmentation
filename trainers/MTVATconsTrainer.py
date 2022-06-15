@@ -40,12 +40,8 @@ class ConstraintMTVATTrainer(BaseTrainer):
                              **kwargs)
         self.constraint = self._config['Constraints']['Constraint']
         self.num_samples = self._config['Constraints']['num_samples']
-        self.rein_baseline = self._config['Constraints']['Rein_baseline']
-        if self.constraint == "connectivity":
-            self.credit_type = self._config['Constraints']['Connectivity']['credit_type']  # binary and discrete
-        else:
-            self.credit_type = self._config['Constraints']['Convexity'][
-                'credit_types']  # convex_hull, defects, pseudo_like_FG, pseudo_like_BG, reverse_FGBG
+        self.reward_type = self._config['Constraints']['reward_type']  # binary and discrete
+
         self.tmp = self._config['VATsettings']['Temperature']
         self.diag_connectivity = self._config['Constraints']['Connectivity']['diag_connectivity']
         self.Fscale = self._config['Constraints']['Connectivity']['flood_fill_Kernel']
@@ -53,12 +49,11 @@ class ConstraintMTVATTrainer(BaseTrainer):
         self.adexample = generateAD(eps=self._config['VATsettings']['pertur_eps'], temp=self.tmp,
                                     constraint=self.constraint,
                                     num_samples=self.num_samples, consweight=self._constraint_scheduler.value,
-                                    rein_baseline=self.rein_baseline, reward_type=self.credit_type,
-                                    Fscale=self.Fscale, Cscale=self.Cscale, my_connectivity=self.diag_connectivity)
+                                    reward_type=self.reward_type, Fscale=self.Fscale, Cscale=self.Cscale, my_connectivity=self.diag_connectivity)
         self.reinforce_cons_loss = reinforce_cons_loss(num_sample=self.num_samples, constraint=self.constraint,
                                                        Fscale=self.Fscale, Cscale=self.Cscale,
                                                        my_connectivity=self.diag_connectivity, run_state='train',
-                                                       reward_type=self.credit_type, rein_baseline=self.rein_baseline)
+                                                       reward_type=self.reward_type)
         self._ce_criterion = SimplexCrossEntropyLoss()
 
     def _run_step(self, lab_data, unlab_data):
