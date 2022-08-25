@@ -1,6 +1,6 @@
 import torch
 from torch.utils.data import DataLoader
-from collections import Iterator
+from collections.abc import Iterator
 from datasets._medicalSegmentationDataset import MedicalImageSegmentationDataset
 from datasets.augmentation.sychronized_augment import SequentialWrapper
 from typing import Tuple, Callable, List, Type, Dict, Union, Match, Pattern

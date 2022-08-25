@@ -1,7 +1,7 @@
 Arch:
   name: enet
   input_dim: 1
-  num_classes: 2  # 2, 3, 4
+  num_classes: 4  # 2, 3, 4
 
 Optim:
   name: RAdam
@@ -15,7 +15,7 @@ Scheduler:
     total_epoch: 10
 
 Dataset: acdc # acdc, prostate, spleen, prostateDK
-Foreground: LV # LV, Myo, RV, all
+Foreground: all # LV, Myo, RV, all
 
 Data:
   unlabeled_data_ratio: 0.95
@@ -57,7 +57,7 @@ VATsettings:
   Temperature: 1
 
 Constraints:
-  Constraint: convexity  # connectivity, convexity
+  Constraint: connectivity  # connectivity, convexity
   num_samples: 10
   reward_type: soft # hard, soft
   reverse_indicator: True # False: FGBG; True: reverse_FGBG
