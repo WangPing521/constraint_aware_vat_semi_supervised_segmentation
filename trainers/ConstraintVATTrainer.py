@@ -52,16 +52,17 @@ class ConstraintVATTrainer(BaseTrainer):
                                         Cscale=self._config['Constraints']['Connectivity']['local_conn_Kernel'],
                                         my_connectivity=self.diag_connectivity)
 
-    def _run_step(self, lab_data, unlab_data):
+    def _run_step(self, lab_data, unlab_data, cur_batch):
 
         image, target, filename = (
             lab_data[0][0].to(self._device),
             lab_data[0][1].to(self._device),
             lab_data[1],
         )
-        uimage, utarget = (
+        uimage, utarget, unlab_filename = (
             unlab_data[0][0].to(self._device),
             unlab_data[0][1].to(self._device),
+            unlab_data[1],
         )
         lab_preds = self._model[0](image).softmax(1)
         if self._config['Dataset'] == "acdc":
@@ -88,7 +89,7 @@ class ConstraintVATTrainer(BaseTrainer):
             pred = (self._model[0](uimage) / self.tmp).softmax(1)
         assert simplex(pred)
 
-        lds, cons = self.cons_vatloss(self._model[0], uimage, pred)
+        lds, cons = self.cons_vatloss(self._model[0], uimage, pred, unlab_filename, cur_epoch=self.cur_epoch, cur_batch=cur_batch, writer=self.writer)
 
         if self.constraint == "connectivity":
             non_con = self.report_constriant(pred, utarget)

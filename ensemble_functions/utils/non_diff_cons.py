@@ -5,7 +5,7 @@ import numpy as np
 from skimage.morphology import flood_fill
 from torch import Tensor
 import cv2
-from ensemble_functions.utils.independent_functions import average_list
+from ensemble_functions.utils.independent_functions import average_list, plot_seg, plot_feature
 
 device = 'cuda'
 
@@ -284,8 +284,9 @@ class reinforce_cons_loss(nn.Module):
         self._my_connectivity = my_connectivity
         self._run_state = run_state
 
-    def forward(self, prob: Tensor, **kwargs) -> Tensor:
+    def forward(self, prob: Tensor, unlab_filename, cur_epoch, cur_batch, writer, **kwargs) -> Tensor:
         probs, samples = prob_sample(prob, reverse_indicator=self.reverse)
+
         if self._constraint == "connectivity":
             fg_num = prob.shape[1]  # fg_num: the number of classes
             C_rewards = connectivity_rewards(samples=samples, fg_num=fg_num, Fscale=self._Fscale, Cscale=self._Cscale,
@@ -295,6 +296,30 @@ class reinforce_cons_loss(nn.Module):
             C_rewards = convexity_descriptor(samples, reward_type=self._reward_type)
             C_rewards = C_rewards.transpose(1, 0)
         assert probs.shape == C_rewards.shape
+        #todo: save probs, samples, and rewards(C_rewards)
+        assert probs.shape == samples.shape == C_rewards.shape
+
+        if cur_batch == 0:
+            samples1 = plot_seg(unlab_filename[-1], samples[-1][0])
+            samples2 = plot_seg(unlab_filename[-1], samples[-1][1])
+            samples3 = plot_seg(unlab_filename[-1], samples[-1][2])
+            writer.add_figure(tag=f"train_samples1", figure=samples1, global_step=cur_epoch, close=True)
+            writer.add_figure(tag=f"train_samples2", figure=samples2, global_step=cur_epoch, close=True)
+            writer.add_figure(tag=f"train_samples3", figure=samples3, global_step=cur_epoch, close=True)
+
+            probs1 = plot_seg(unlab_filename[-1], probs[-1][0])
+            probs2 = plot_seg(unlab_filename[-1], probs[-1][1])
+            probs3 = plot_seg(unlab_filename[-1], probs[-1][2])
+            writer.add_figure(tag=f"probs1", figure=probs1, global_step=cur_epoch, close=True)
+            writer.add_figure(tag=f"probs2", figure=probs2, global_step=cur_epoch, close=True)
+            writer.add_figure(tag=f"probs3", figure=probs3, global_step=cur_epoch, close=True)
+
+            rewards_samp1 = plot_seg(unlab_filename[-1], C_rewards[-1][0])
+            rewards_samp2 = plot_seg(unlab_filename[-1], C_rewards[-1][1])
+            rewards_samp3 = plot_seg(unlab_filename[-1], C_rewards[-1][2])
+            writer.add_figure(tag=f"rewards_samp1", figure=rewards_samp1, global_step=cur_epoch, close=True)
+            writer.add_figure(tag=f"rewards_samp2", figure=rewards_samp2, global_step=cur_epoch, close=True)
+            writer.add_figure(tag=f"rewards_samp3", figure=rewards_samp3, global_step=cur_epoch, close=True)
 
         # avg_reward = ((1 / C_rewards.transpose(1, 0).shape[1]) * C_rewards.transpose(1, 0).sum(dim=1)).unsqueeze(1)
         avg_reward = 0.5

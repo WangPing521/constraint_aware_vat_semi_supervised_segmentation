@@ -140,7 +140,7 @@ class BaseTrainer(_Trainer):
                 sup_loss, reg_loss = self.run_step(lab_data=lab_data, unlab_data=unlab_data)
 
             elif self._config['Trainer']['name'] in ['consVat', 'MTconsvat', 'cotconsVAT']:
-                sup_loss, reg_loss, rein_cons, non_con = self.run_step(lab_data=lab_data, unlab_data=unlab_data)
+                sup_loss, reg_loss, rein_cons, non_con = self.run_step(lab_data=lab_data, unlab_data=unlab_data, cur_batch=batch_id)
                 count = count + 1
                 sum_disc = sum_disc + non_con
 
@@ -304,7 +304,8 @@ class BaseTrainer(_Trainer):
 
     def _start_training(self):
         self.to(self._device)
-        for epoch in range(self._start_epoch, self._max_epoch):
+        self.cur_epoch = 0
+        for self.cur_epoch in range(self._start_epoch, self._max_epoch):
             self._meter_interface['lr'].add(self._model.get_lr()[0])
             self._meter_interface["weight"].add(self._weight_scheduler.value)
             self._meter_interface["consweight"].add(self._constraint_scheduler.value)
@@ -312,17 +313,17 @@ class BaseTrainer(_Trainer):
             self.train_loop(
                 lab_loader=self._lab_loader,
                 unlab_loader=self._unlab_loader,
-                epoch=epoch
+                epoch=self.cur_epoch
             )
             with torch.no_grad():
-                current_score = self.eval_loop(self._val_loader, epoch)
+                current_score = self.eval_loop(self._val_loader, self.cur_epoch)
 
             self.schedulerStep()
             self._meter_interface.step()
 
             if hasattr(self, "_dataframe_drawer"):
                 self._dataframe_drawer()
-            self.save_checkpoint(self.state_dict(), epoch, current_score)
+            self.save_checkpoint(self.state_dict(), self.cur_epoch, current_score)
             self._meter_interface.summary().to_csv(self._save_dir / "wholeMeter.csv")
 
 

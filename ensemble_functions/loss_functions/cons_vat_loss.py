@@ -37,7 +37,7 @@ class consVATLoss(nn.Module):
                                                        my_connectivity=self.my_connectivity)
 
 
-    def forward(self, model, x: torch.Tensor, pred):
+    def forward(self, model, x: torch.Tensor, pred, unlab_filename, cur_epoch, cur_batch, writer):
         """
         We support the output of the model would be a simplex.
         :param model:
@@ -56,7 +56,7 @@ class consVATLoss(nn.Module):
                 pred_hat = (model(x + self.xi * d) / self.temp).softmax(1)
                 # pred_hat = torch.softmax(model(x + self.xi * d) / self.temp, dim=1)
                 adv_distance = self.distance_func(pred_hat, pred)
-                adv_cons = self.reinforce_cons_loss(pred_hat)
+                adv_cons = self.reinforce_cons_loss(pred_hat, unlab_filename, cur_epoch, cur_batch, writer)
 
                 adv_loss = adv_distance + self.consweight * adv_cons
                 adv_loss.backward()
@@ -77,5 +77,5 @@ class consVATLoss(nn.Module):
             # pred_hat = torch.softmax(model(x + r_adv) / self.temp, dim=1)
             pred_hat = (model(x + r_adv) / self.temp).softmax(1)
             lds = self.distance_func(pred_hat, pred)
-            cons = self.reinforce_cons_loss(pred_hat)
+            cons = self.reinforce_cons_loss(pred_hat, unlab_filename, cur_epoch, cur_batch, writer)
         return lds, cons

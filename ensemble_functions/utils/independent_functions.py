@@ -13,7 +13,7 @@ import warnings
 import yaml
 from tqdm import tqdm
 import matplotlib as mpl
-
+import matplotlib.pyplot as plt
 
 A = TypeVar("A")
 B = TypeVar("B")
@@ -259,7 +259,7 @@ def flatten_dict(d, parent_key="", sep="_"):
     items = []
     for k, v in d.items():
         new_key = parent_key + sep + k if parent_key else k
-        if isinstance(v, collections.MutableMapping):
+        if isinstance(v, collections.abc.MutableMapping):
             items.extend(flatten_dict(v, new_key, sep=sep).items())
         else:
             items.append((new_key, v))
@@ -368,3 +368,31 @@ def _disable_tracking_bn_stats(model):
     yield
     # let the track_running_stats to be inverse
     model.apply(switch_attr)
+
+
+def plot_seg(img, label):
+    # img_volume = img.squeeze(0)
+    fig = plt.figure()
+    plt.title(f'{img}')
+    # img_volume = tensor2plotable(img_volume)
+    # plt.imshow(img_volume, cmap="gray")
+    gt_volume = tensor2plotable(label)
+    # con = plt.contour(gt_volume)
+    plt.imshow(gt_volume, alpha=1, cmap="viridis")
+    # plt.show(block=False)
+    return fig
+
+def plot_feature(img):
+    img_volume = img
+    fig = plt.figure()
+    img_volume = tensor2plotable(img_volume)
+    plt.imshow(img_volume, cmap="gray")
+    return fig
+
+def tensor2plotable(tensor) -> np.ndarray:
+    if isinstance(tensor, np.ndarray):
+        return tensor
+    elif isinstance(tensor, torch.Tensor):
+        return tensor.detach().cpu().numpy()
+    else:
+        raise TypeError(f"tensor should be an instance of Tensor, given {type(tensor)}")
