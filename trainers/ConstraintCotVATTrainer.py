@@ -39,7 +39,7 @@ class ConstraintCotVATTrainer(BaseTrainer):
                              **kwargs)
         self.constraint = self._config['Constraints']['Constraint']
         self.num_samples = self._config['Constraints']['num_samples']
-        self.reward_type = self._config['Constraints']['reward_type']  # binary and discrete
+        self.reward_type = self._config['Constraints']['reward_type']  # hard and soft
         self.diag_connectivity = self._config['Constraints']['Connectivity']['diag_connectivity']
         self.tmp = self._config['VATsettings']['Temperature']
         self._ce_criterion = SimplexCrossEntropyLoss()
@@ -93,7 +93,7 @@ class ConstraintCotVATTrainer(BaseTrainer):
 
         with torch.no_grad():
             unlab_preds_tmp = (self._model[1](uimage) / self.tmp).softmax(1)
-        uimage_ad = self.adexample(self._model[1], uimage, unlab_preds_tmp)
+        uimage_ad = self.adexample(self._model[1], uimage, unlab_preds_tmp, mode=self._config['Plugin']['mode'])
 
         unlab_predlist.append(self._model[1](uimage_ad).softmax(1))
 
@@ -114,8 +114,10 @@ class ConstraintCotVATTrainer(BaseTrainer):
             target.squeeze(1),
             group_name=["_".join(x.split("_")[:-2]) for x in filename],
         )
-
-        cons = self.reinforce_cons_loss(unlab_predlist[1])
+        if self._config['Plugin']['mode'] in ['cat']:
+            cons = self.reinforce_cons_loss(unlab_predlist[1], mode='vat')
+        else:
+            cons = 0
 
         if self.constraint == "connectivity":
             non_con = self.report_constriant(unlab_predlist[1], utarget)

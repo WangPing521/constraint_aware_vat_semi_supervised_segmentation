@@ -41,6 +41,7 @@ class ConstraintVATTrainer(BaseTrainer):
         self.num_samples = self._config['Constraints']['num_samples']
         self.reward_type = self._config['Constraints']['reward_type']  # binary and discrete
         self.reverse = self._config['Constraints']['reverse_indicator'] # FGBG or reversed FGBG
+        self.constraintinput = self._config['Constraints']['examples']
 
         self.diag_connectivity = self._config['Constraints']['Connectivity']['diag_connectivity']
         self.tmp = self._config['VATsettings']['Temperature']
@@ -84,12 +85,10 @@ class ConstraintVATTrainer(BaseTrainer):
         )
         sup_loss = self._ce_criterion(lab_preds, onehot_target)
 
-        with torch.no_grad():
-            # pred = torch.softmax(self._model[0](uimage) / self._config['Temperature'], dim=1)
-            pred = (self._model[0](uimage) / self.tmp).softmax(1)
+        pred = (self._model[0](uimage) / self.tmp).softmax(1)
         assert simplex(pred)
 
-        lds, cons = self.cons_vatloss(self._model[0], uimage, pred, unlab_filename, cur_epoch=self.cur_epoch, cur_batch=cur_batch, writer=self.writer)
+        lds, cons = self.cons_vatloss(self._model[0], uimage, pred, unlab_filename, cur_epoch=self.cur_epoch, cur_batch=cur_batch, writer=self.writer, constrainboth=self.constraintinput)
 
         if self.constraint == "connectivity":
             non_con = self.report_constriant(pred, utarget)

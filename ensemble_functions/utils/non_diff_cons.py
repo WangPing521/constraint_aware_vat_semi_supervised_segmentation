@@ -5,7 +5,7 @@ import numpy as np
 from skimage.morphology import flood_fill
 from torch import Tensor
 import cv2
-from ensemble_functions.utils.independent_functions import average_list, plot_seg, plot_feature
+from ensemble_functions.utils.independent_functions import average_list, plot_seg, plot_feature, plot_joint_matrix
 
 device = 'cuda'
 
@@ -284,7 +284,7 @@ class reinforce_cons_loss(nn.Module):
         self._my_connectivity = my_connectivity
         self._run_state = run_state
 
-    def forward(self, prob: Tensor, unlab_filename, cur_epoch, cur_batch, writer, **kwargs) -> Tensor:
+    def forward(self, prob: Tensor, unlab_filename=None, cur_epoch=0, cur_batch=0, writer=None, mode='cat', **kwargs) -> Tensor:
         probs, samples = prob_sample(prob, reverse_indicator=self.reverse)
 
         if self._constraint == "connectivity":
@@ -299,27 +299,52 @@ class reinforce_cons_loss(nn.Module):
         #todo: save probs, samples, and rewards(C_rewards)
         assert probs.shape == samples.shape == C_rewards.shape
 
-        if cur_batch == 0:
-            samples1 = plot_seg(unlab_filename[-1], samples[-1][0])
-            samples2 = plot_seg(unlab_filename[-1], samples[-1][1])
-            samples3 = plot_seg(unlab_filename[-1], samples[-1][2])
-            writer.add_figure(tag=f"train_samples1", figure=samples1, global_step=cur_epoch, close=True)
-            writer.add_figure(tag=f"train_samples2", figure=samples2, global_step=cur_epoch, close=True)
-            writer.add_figure(tag=f"train_samples3", figure=samples3, global_step=cur_epoch, close=True)
+        if mode in ['cat']:
+            if cur_batch == 0:
+                # img1
+                joint1 = torch.cat([samples[-1][0].unsqueeze(0), probs[-1][0].unsqueeze(0)], 0)
+                joint1 = torch.cat([joint1, C_rewards[-1][0].unsqueeze(0)], 0)
+                joint1 = joint1.unsqueeze(0)
+                # joint, sample+prob+reward
+                sample1 = plot_joint_matrix(unlab_filename[-1], joint1)
+                writer.add_figure(tag=f"train_img1_samples1", figure=sample1, global_step=cur_epoch, close=True)
 
-            probs1 = plot_seg(unlab_filename[-1], probs[-1][0])
-            probs2 = plot_seg(unlab_filename[-1], probs[-1][1])
-            probs3 = plot_seg(unlab_filename[-1], probs[-1][2])
-            writer.add_figure(tag=f"probs1", figure=probs1, global_step=cur_epoch, close=True)
-            writer.add_figure(tag=f"probs2", figure=probs2, global_step=cur_epoch, close=True)
-            writer.add_figure(tag=f"probs3", figure=probs3, global_step=cur_epoch, close=True)
+                joint2 = torch.cat([samples[-1][1].unsqueeze(0), probs[-1][1].unsqueeze(0)], 0)
+                joint2 = torch.cat([joint2, C_rewards[-1][1].unsqueeze(0)], 0)
+                joint2 = joint2.unsqueeze(0)
+                # joint, sample+prob+reward
+                sample2 = plot_joint_matrix(unlab_filename[-1], joint2)
+                writer.add_figure(tag=f"train_img1_samples2", figure=sample2, global_step=cur_epoch, close=True)
 
-            rewards_samp1 = plot_seg(unlab_filename[-1], C_rewards[-1][0])
-            rewards_samp2 = plot_seg(unlab_filename[-1], C_rewards[-1][1])
-            rewards_samp3 = plot_seg(unlab_filename[-1], C_rewards[-1][2])
-            writer.add_figure(tag=f"rewards_samp1", figure=rewards_samp1, global_step=cur_epoch, close=True)
-            writer.add_figure(tag=f"rewards_samp2", figure=rewards_samp2, global_step=cur_epoch, close=True)
-            writer.add_figure(tag=f"rewards_samp3", figure=rewards_samp3, global_step=cur_epoch, close=True)
+                joint3 = torch.cat([samples[-1][2].unsqueeze(0), probs[-1][2].unsqueeze(0)], 0)
+                joint3 = torch.cat([joint3, C_rewards[-1][2].unsqueeze(0)], 0)
+                joint3 = joint3.unsqueeze(0)
+                # joint, sample+prob+reward
+                sample3 = plot_joint_matrix(unlab_filename[-1], joint3)
+                writer.add_figure(tag=f"train_img1_samples3", figure=sample3, global_step=cur_epoch, close=True)
+
+                #img2
+                joint21 = torch.cat([samples[-2][0].unsqueeze(0), probs[-2][0].unsqueeze(0)], 0)
+                joint21 = torch.cat([joint21, C_rewards[-2][0].unsqueeze(0)], 0)
+                joint21 = joint21.unsqueeze(0)
+                # joint, sample+prob+reward
+                sample21 = plot_joint_matrix(unlab_filename[-2], joint21)
+                writer.add_figure(tag=f"train_img2_samples1", figure=sample21, global_step=cur_epoch, close=True)
+
+                joint22 = torch.cat([samples[-2][1].unsqueeze(0), probs[-2][1].unsqueeze(0)], 0)
+                joint22 = torch.cat([joint22, C_rewards[-2][1].unsqueeze(0)], 0)
+                joint22 = joint22.unsqueeze(0)
+                # joint, sample+prob+reward
+                sample22 = plot_joint_matrix(unlab_filename[-2], joint22)
+                writer.add_figure(tag=f"train_img2_samples2", figure=sample22, global_step=cur_epoch, close=True)
+
+                joint23 = torch.cat([samples[-2][2].unsqueeze(0), probs[-2][2].unsqueeze(0)], 0)
+                joint23 = torch.cat([joint23, C_rewards[-2][2].unsqueeze(0)], 0)
+                joint23 = joint23.unsqueeze(0)
+                # joint, sample+prob+reward
+                sample23 = plot_joint_matrix(unlab_filename[-2], joint23)
+                writer.add_figure(tag=f"train_img2_samples3", figure=sample23, global_step=cur_epoch, close=True)
+
 
         # avg_reward = ((1 / C_rewards.transpose(1, 0).shape[1]) * C_rewards.transpose(1, 0).sum(dim=1)).unsqueeze(1)
         avg_reward = 0.5

@@ -37,14 +37,14 @@ class consVATLoss(nn.Module):
                                                        my_connectivity=self.my_connectivity)
 
 
-    def forward(self, model, x: torch.Tensor, pred, unlab_filename, cur_epoch, cur_batch, writer):
+    def forward(self, model, x: torch.Tensor, pred, unlab_filename, cur_epoch, cur_batch, writer, constrainboth=False):
         """
         We support the output of the model would be a simplex.
         :param model:
         :param x:
         :return:
         """
-
+        predx = pred.detach()
         # prepare random unit tensor
         d = torch.randn_like(x, device=x.device)
         d = _l2_normalize(d)
@@ -55,8 +55,8 @@ class consVATLoss(nn.Module):
                 d.requires_grad_()
                 pred_hat = (model(x + self.xi * d) / self.temp).softmax(1)
                 # pred_hat = torch.softmax(model(x + self.xi * d) / self.temp, dim=1)
-                adv_distance = self.distance_func(pred_hat, pred)
-                adv_cons = self.reinforce_cons_loss(pred_hat, unlab_filename, cur_epoch, cur_batch, writer)
+                adv_distance = self.distance_func(pred_hat, predx)
+                adv_cons = self.reinforce_cons_loss(pred_hat, unlab_filename, cur_epoch, cur_batch, writer, mode='vat')
 
                 adv_loss = adv_distance + self.consweight * adv_cons
                 adv_loss.backward()
@@ -76,6 +76,12 @@ class consVATLoss(nn.Module):
                 )
             # pred_hat = torch.softmax(model(x + r_adv) / self.temp, dim=1)
             pred_hat = (model(x + r_adv) / self.temp).softmax(1)
-            lds = self.distance_func(pred_hat, pred)
-            cons = self.reinforce_cons_loss(pred_hat, unlab_filename, cur_epoch, cur_batch, writer)
+            lds = self.distance_func(pred_hat, predx)
+
+            if constrainboth:
+                cons = 0.5 * (self.reinforce_cons_loss(pred, unlab_filename, cur_epoch, cur_batch, writer, mode='vat') + self.reinforce_cons_loss(pred_hat, unlab_filename, cur_epoch, cur_batch, writer, mode='vat'))
+
+            else:
+                cons = self.reinforce_cons_loss(pred_hat, unlab_filename, cur_epoch, cur_batch, writer, mode='cat')
+
         return lds, cons

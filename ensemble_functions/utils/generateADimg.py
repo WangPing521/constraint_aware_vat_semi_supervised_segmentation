@@ -32,7 +32,7 @@ class generateAD(nn.Module):
                                                        my_connectivity=self.my_connectivity)
         self.temp = temp
 
-    def forward(self, model, x: torch.Tensor, pred):
+    def forward(self, model, x: torch.Tensor, pred, mode='cat'):
         """
         We support the output of the model would be a simplex.
         :param model:
@@ -51,8 +51,10 @@ class generateAD(nn.Module):
                 # pred_hat = model(x + self.xi * d).softmax(1)
                 pred_hat = torch.softmax(model(x + self.xi * d) / self.temp, dim=1)
                 adv_distance = self.distance_func(pred_hat, pred)
-
-                adv_cons = self.reinforce_cons_loss(pred_hat)
+                if mode in ['cat']:
+                    adv_cons = self.reinforce_cons_loss(pred_hat, mode='vat')
+                else:
+                    adv_cons = 0
 
                 adv_loss = adv_distance + self.consweight * adv_cons
                 adv_loss.backward()

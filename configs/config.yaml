@@ -27,7 +27,7 @@ DataLoader:
   unlabeled_batch_size: 4
   val_batch_size: 6
   shuffle: True
-  num_workers: 0
+  num_workers: 2
   pin_memory: False
 
 Trainer:
@@ -57,6 +57,7 @@ VATsettings:
   Temperature: 1
 
 Constraints:
+  examples: False # True: original and adversarial//  False: only on adversarial
   Constraint: connectivity  # connectivity, convexity
   num_samples: 10
   reward_type: soft # hard, soft
@@ -65,5 +66,8 @@ Constraints:
     diag_connectivity: 1 # exclude diag
     flood_fill_Kernel: 5
     local_conn_Kernel: 3
+
+Plugin:
+  mode: cat # vat cat
 
 seed: 1234567

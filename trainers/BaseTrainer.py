@@ -173,7 +173,8 @@ class BaseTrainer(_Trainer):
             if self._config['Trainer']['name'] == "Baselines" and self._config['MinEntropy']:
                 self._meter_interface['reg_loss'].add(reg_loss.item())
 
-            if self._config['Trainer']['name'] in ['consVat', 'MTconsvat', 'cotconsVAT', 'constraintReg', 'Pseudolike']:
+            if self._config['Trainer']['name'] in ['consVat', 'MTconsvat', 'cotconsVAT', 'constraintReg', 'Pseudolike'] and \
+                    self._config['Plugin']['mode'] in ['cat']:
                 self._meter_interface['rein_loss'].add(rein_cons.item())
 
 

@@ -14,6 +14,7 @@ import yaml
 from tqdm import tqdm
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 A = TypeVar("A")
 B = TypeVar("B")
@@ -369,6 +370,25 @@ def _disable_tracking_bn_stats(model):
     # let the track_running_stats to be inverse
     model.apply(switch_attr)
 
+
+def plot_joint_matrix(file_name, joint: Tensor):
+    assert joint.dim() == 4, joint.shape
+    n1, n2 = joint.shape[0:2]
+    fig = plt.figure()
+    fig.set_figwidth(15)
+    joint = joint.detach().cpu().float().numpy()
+    for i1 in range(1, n1 + 1):
+        for i2 in range(1, n2 + 1):
+            ax = plt.subplot(n1, n2, (i1 - 1) * n1 + i2)
+            plt.title(f'{file_name}')
+
+            img = joint[i1 - 1, i2 - 1]
+            im_ = ax.imshow(img)
+
+            divider = make_axes_locatable(ax)
+            cax = divider.append_axes("right", size="5%", pad=0.05)
+            fig.colorbar(im_, cax=cax, orientation='vertical')
+    return fig
 
 def plot_seg(img, label):
     # img_volume = img.squeeze(0)

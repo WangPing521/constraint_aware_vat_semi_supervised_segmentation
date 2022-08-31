@@ -56,7 +56,7 @@ class ConstraintMTVATTrainer(BaseTrainer):
                                                        reward_type=self.reward_type)
         self._ce_criterion = SimplexCrossEntropyLoss()
 
-    def _run_step(self, lab_data, unlab_data):
+    def _run_step(self, lab_data, unlab_data, cur_batch=0):
 
         image, target, filename = (
             lab_data[0][0].to(self._device),
@@ -92,7 +92,7 @@ class ConstraintMTVATTrainer(BaseTrainer):
         with torch.no_grad():
             uimage_preds_tmp = (self._model[0](uimage) / self.tmp).softmax(1)
 
-        uimage_ad = self.adexample(self._model[0], uimage, uimage_preds_tmp)
+        uimage_ad = self.adexample(self._model[0], uimage, uimage_preds_tmp, mode=self._config['Plugin']['mode'])
         unlab_predS = self._model[0](uimage_ad).softmax(1)
 
         sup_loss = self._ce_criterion(lab_preds, onehot_target)
@@ -103,8 +103,10 @@ class ConstraintMTVATTrainer(BaseTrainer):
             target.squeeze(1),
             group_name=["_".join(x.split("_")[:-2]) for x in filename],
         )
-
-        cons = self.reinforce_cons_loss(unlab_predS)
+        if self._config['Plugin']['mode'] in ['cat']:
+            cons = self.reinforce_cons_loss(unlab_predS, mode='vat')
+        else:
+            cons = 0
 
         if self.constraint == "connectivity":
             non_con = self.report_constriant(unlab_predS, utarget)
