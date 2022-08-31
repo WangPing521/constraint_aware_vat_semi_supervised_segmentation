@@ -56,7 +56,7 @@ class ConstraintMTVATTrainer(BaseTrainer):
                                                        reward_type=self.reward_type)
         self._ce_criterion = SimplexCrossEntropyLoss()
 
-    def _run_step(self, lab_data, unlab_data, cur_batch=0):
+    def _run_step(self, lab_data, unlab_data, cur_batch):
 
         image, target, filename = (
             lab_data[0][0].to(self._device),

@@ -55,7 +55,7 @@ class ConstraintCotVATTrainer(BaseTrainer):
                                     Cscale=self._config['Constraints']['Connectivity']['local_conn_Kernel'],
                                     my_connectivity=self.diag_connectivity)
 
-    def _run_step(self, lab_data, unlab_data):
+    def _run_step(self, lab_data, unlab_data, cur_batch):
 
         image, target, filename = (
             lab_data[0][0].to(self._device),
