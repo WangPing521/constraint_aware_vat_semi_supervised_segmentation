@@ -299,7 +299,7 @@ class reinforce_cons_loss(nn.Module):
         #todo: save probs, samples, and rewards(C_rewards)
         assert probs.shape == samples.shape == C_rewards.shape
 
-        if mode in ['cat']:
+        if mode in ['cat'] and unlab_filename is not None:
             if cur_batch == 0:
                 # img1
                 if self._reward_type in ['hard']:
