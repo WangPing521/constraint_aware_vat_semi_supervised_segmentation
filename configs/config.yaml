@@ -57,7 +57,7 @@ VATsettings:
   Temperature: 1
 
 Constraints:
-  examples: False # adv_examples  original_unlab  both
+  examples: adv_examples # adv_examples  original_unlab  both
   Constraint: connectivity  # connectivity, convexity
   num_samples: 10
   reward_type: soft # hard, soft

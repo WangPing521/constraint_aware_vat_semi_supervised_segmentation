@@ -37,7 +37,7 @@ class consVATLoss(nn.Module):
                                                        my_connectivity=self.my_connectivity)
 
 
-    def forward(self, model, x: torch.Tensor, pred, unlab_filename, cur_epoch, cur_batch, writer, lcons_examples='original_unlab'):
+    def forward(self, model, x: torch.Tensor, pred, unlab_filename, cur_epoch, cur_batch, writer, lcons_examples='adv_examples'):
         """
         We support the output of the model would be a simplex.
         :param model:
