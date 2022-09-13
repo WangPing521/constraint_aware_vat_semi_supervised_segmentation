@@ -14,7 +14,7 @@ Scheduler:
     multiplier: 300
     total_epoch: 10
 
-Dataset: acdc # acdc, prostate, spleen, prostateDK
+Dataset: prostateDK # acdc, prostate, spleen, prostateDK
 Foreground: all # LV, Myo, RV, all
 
 Data:

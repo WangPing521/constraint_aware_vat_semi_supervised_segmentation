@@ -302,22 +302,27 @@ class reinforce_cons_loss(nn.Module):
         if mode in ['cat']:
             if cur_batch == 0:
                 # img1
+                if self._reward_type in ['hard']:
+                    reward_plot = torch.where(-C_rewards == -1, torch.Tensor([0]).to(device), -C_rewards)
+                elif self._reward_type in ['soft']:
+                    reward_plot = torch.where(C_rewards == -1, torch.Tensor([0]).to(device), C_rewards)
+
                 joint1 = torch.cat([samples[-1][0].unsqueeze(0), probs[-1][0].unsqueeze(0)], 0)
-                joint1 = torch.cat([joint1, C_rewards[-1][0].unsqueeze(0)], 0)
+                joint1 = torch.cat([joint1, reward_plot[-1][0].unsqueeze(0)], 0)
                 joint1 = joint1.unsqueeze(0)
                 # joint, sample+prob+reward
                 sample1 = plot_joint_matrix(unlab_filename[-1], joint1)
                 writer.add_figure(tag=f"train_img1_samples1", figure=sample1, global_step=cur_epoch, close=True)
 
                 joint2 = torch.cat([samples[-1][1].unsqueeze(0), probs[-1][1].unsqueeze(0)], 0)
-                joint2 = torch.cat([joint2, C_rewards[-1][1].unsqueeze(0)], 0)
+                joint2 = torch.cat([joint2, reward_plot[-1][1].unsqueeze(0)], 0)
                 joint2 = joint2.unsqueeze(0)
                 # joint, sample+prob+reward
                 sample2 = plot_joint_matrix(unlab_filename[-1], joint2)
                 writer.add_figure(tag=f"train_img1_samples2", figure=sample2, global_step=cur_epoch, close=True)
 
                 joint3 = torch.cat([samples[-1][2].unsqueeze(0), probs[-1][2].unsqueeze(0)], 0)
-                joint3 = torch.cat([joint3, C_rewards[-1][2].unsqueeze(0)], 0)
+                joint3 = torch.cat([joint3, reward_plot[-1][2].unsqueeze(0)], 0)
                 joint3 = joint3.unsqueeze(0)
                 # joint, sample+prob+reward
                 sample3 = plot_joint_matrix(unlab_filename[-1], joint3)
@@ -325,21 +330,21 @@ class reinforce_cons_loss(nn.Module):
 
                 #img2
                 joint21 = torch.cat([samples[-2][0].unsqueeze(0), probs[-2][0].unsqueeze(0)], 0)
-                joint21 = torch.cat([joint21, C_rewards[-2][0].unsqueeze(0)], 0)
+                joint21 = torch.cat([joint21, reward_plot[-2][0].unsqueeze(0)], 0)
                 joint21 = joint21.unsqueeze(0)
                 # joint, sample+prob+reward
                 sample21 = plot_joint_matrix(unlab_filename[-2], joint21)
                 writer.add_figure(tag=f"train_img2_samples1", figure=sample21, global_step=cur_epoch, close=True)
 
                 joint22 = torch.cat([samples[-2][1].unsqueeze(0), probs[-2][1].unsqueeze(0)], 0)
-                joint22 = torch.cat([joint22, C_rewards[-2][1].unsqueeze(0)], 0)
+                joint22 = torch.cat([joint22, reward_plot[-2][1].unsqueeze(0)], 0)
                 joint22 = joint22.unsqueeze(0)
                 # joint, sample+prob+reward
                 sample22 = plot_joint_matrix(unlab_filename[-2], joint22)
                 writer.add_figure(tag=f"train_img2_samples2", figure=sample22, global_step=cur_epoch, close=True)
 
                 joint23 = torch.cat([samples[-2][2].unsqueeze(0), probs[-2][2].unsqueeze(0)], 0)
-                joint23 = torch.cat([joint23, C_rewards[-2][2].unsqueeze(0)], 0)
+                joint23 = torch.cat([joint23, reward_plot[-2][2].unsqueeze(0)], 0)
                 joint23 = joint23.unsqueeze(0)
                 # joint, sample+prob+reward
                 sample23 = plot_joint_matrix(unlab_filename[-2], joint23)
@@ -347,8 +352,9 @@ class reinforce_cons_loss(nn.Module):
 
 
         # avg_reward = ((1 / C_rewards.transpose(1, 0).shape[1]) * C_rewards.transpose(1, 0).sum(dim=1)).unsqueeze(1)
-        avg_reward = 0.5
-        cons_loss = ((C_rewards - avg_reward) * torch.log(probs + 1e-6)).mean()
+        # avg_reward = 0.5
+        # cons_loss = ((C_rewards - avg_reward) * torch.log(probs + 1e-6)).mean()
+        cons_loss = (- C_rewards * torch.log(probs + 1e-6)).mean()
 
         return cons_loss
 

@@ -126,7 +126,7 @@ def dict_merge(dct: Dict[str, Any], merge_dct: Dict[str, Any], re=True):
         if (
             k in dct
             and isinstance(dct[k], dict)
-            and isinstance(merge_dct[k], collections.Mapping)
+            and isinstance(merge_dct[k], collections.abc.Mapping)
         ):
             dict_merge(dct[k], merge_dct[k])
         else:

@@ -8,7 +8,7 @@ from ensemble_functions.scheduler.customized_scheduler import RampScheduler
 from ensemble_functions.utils.configManager import ConfigManger
 from ensemble_functions.utils.ensembel_model import Model
 from ensemble_functions.utils.getmodel_tool import ModelList
-from ensemble_functions.utils.independent_functions import fix_all_seed, get_group_set
+from ensemble_functions.utils.independent_functions import fix_all_seed, get_group_set, save_images
 from trainers.BaselinesTrainer import BaselinesTrainer
 from trainers.ConstraintCotVATTrainer import ConstraintCotVATTrainer
 from trainers.ConstraintTrainer import ConstraintTrainer
@@ -100,8 +100,6 @@ trainer = trainer_name(
 
 # trainer.inference(identifier='last.pth')
 trainer.start_training()
-
-
 
 
 
