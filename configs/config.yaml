@@ -57,7 +57,7 @@ VATsettings:
   Temperature: 1
 
 Constraints:
-  examples: False # True: original and adversarial//  False: only on adversarial
+  examples: False # adv_examples  original_unlab  both
   Constraint: connectivity  # connectivity, convexity
   num_samples: 10
   reward_type: soft # hard, soft

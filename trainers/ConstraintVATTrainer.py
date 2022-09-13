@@ -88,7 +88,7 @@ class ConstraintVATTrainer(BaseTrainer):
         pred = (self._model[0](uimage) / self.tmp).softmax(1)
         assert simplex(pred)
 
-        lds, cons = self.cons_vatloss(self._model[0], uimage, pred, unlab_filename, cur_epoch=self.cur_epoch, cur_batch=cur_batch, writer=self.writer, constrainboth=self.constraintinput)
+        lds, cons = self.cons_vatloss(self._model[0], uimage, pred, unlab_filename, cur_epoch=self.cur_epoch, cur_batch=cur_batch, writer=self.writer, lcons_examples=self.constraintinput)
 
         if self.constraint == "connectivity":
             non_con = self.report_constriant(pred, utarget)
