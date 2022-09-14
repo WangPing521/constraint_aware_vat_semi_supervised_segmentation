@@ -305,7 +305,7 @@ class reinforce_cons_loss(nn.Module):
                 if self._reward_type in ['hard']:
                     reward_plot = torch.where(-C_rewards == -1, torch.Tensor([0]).to(device), -C_rewards)
                 elif self._reward_type in ['soft']:
-                    reward_plot = torch.where(C_rewards == -1, torch.Tensor([0]).to(device), C_rewards)
+                    reward_plot = torch.where(-C_rewards == -1, torch.Tensor([0]).to(device), C_rewards)
 
                 joint1 = torch.cat([samples[-1][0].unsqueeze(0), probs[-1][0].unsqueeze(0)], 0)
                 joint1 = torch.cat([joint1, reward_plot[-1][0].unsqueeze(0)], 0)
