@@ -212,7 +212,7 @@ class BaseTrainer(_Trainer):
     ) -> float:
         self._model.set_mode(mode)
         count, avg_cn_reward, avg_cv_reward = 0, 0, 0
-        val_indicator = tqdm_(val_loader)
+        val_indicator = tqdm(val_loader)
         val_indicator.set_description(f"Val_Epoch {epoch:03d}")
         for batch_id, data in enumerate(val_indicator):
             image, target, filename = (

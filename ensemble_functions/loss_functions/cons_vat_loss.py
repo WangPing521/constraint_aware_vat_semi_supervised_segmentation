@@ -10,7 +10,7 @@ from ensemble_functions.utils.non_diff_cons import reinforce_cons_loss
 
 class consVATLoss(nn.Module):
     def __init__(
-        self, xi=10.0, eps=1.0, ip=2, temp=1, distance_func=KL_div(), constraint='connectivity', num_samples=10, consweight=0.5,
+        self, xi=10.0, eps=1.0, ip=1, temp=1, distance_func=KL_div(), constraint='connectivity', num_samples=10, consweight=0.5,
             reward_type="binary", reverse_indicator=False, Fscale=5, Cscale=3, my_connectivity=None
     ):
         """VAT loss

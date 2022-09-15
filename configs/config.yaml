@@ -35,7 +35,7 @@ Trainer:
   device: cuda
   save_dir: runs
   num_batches: 200
-  max_epoch: 101 # 50, 100
+  max_epoch: 100 # 50, 100
   checkpoint_path: runs
 
 RegScheduler:

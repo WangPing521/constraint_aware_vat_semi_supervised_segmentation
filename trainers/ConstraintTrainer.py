@@ -57,9 +57,10 @@ class ConstraintTrainer(BaseTrainer):
             lab_data[0][1].to(self._device),
             lab_data[1],
         )
-        uimage, utarget = (
+        uimage, utarget, unlab_filename = (
             unlab_data[0][0].to(self._device),
             unlab_data[0][1].to(self._device),
+            unlab_data[1],
         )
         lab_preds = self._model[0](image).softmax(1)
         if self._config['Dataset'] == "acdc":
@@ -82,7 +83,7 @@ class ConstraintTrainer(BaseTrainer):
         sup_loss = self._ce_criterion(lab_preds, onehot_target)
 
         pred = (self._model[0](uimage) / self._tmp).softmax(1)
-        cons_loss = self.reinforce_cons_loss(pred)
+        cons_loss = self.reinforce_cons_loss(pred, unlab_filename=unlab_filename, writer=self.writer)
 
         self._meter_interface[f"train{0}_dice"].add(
             lab_preds.max(1)[1],
