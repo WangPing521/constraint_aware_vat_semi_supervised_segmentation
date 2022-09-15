@@ -7,7 +7,7 @@ dictitems:
     name: enet
     num_classes: 4
   ConstraintWeightScheduler:
-    begin_epoch: 0
+    begin_epoch: 10
     max_epoch: 50
     max_value: 0
     min_value: 0
@@ -41,7 +41,7 @@ dictitems:
   Plugin:
     mode: cat
   RegScheduler:
-    begin_epoch: 0
+    begin_epoch: 5
     max_epoch: 50
     max_value: 0
     min_value: 0

@@ -119,7 +119,12 @@ def connectivity_rewards(samples, fg_num, Fscale, Cscale, reward_type='hard', my
                     per_c_rewards_tmp = -(F_fg_neigbors / S_fg_neigbors1).transpose(1,0)
 
                     sub_per_c_rewards = (fc_nonzerobg == sc_nonzerobg).float().transpose(1, 0)
-                    per_c_rewards = (fg - sub_per_c_rewards) + per_c_rewards_tmp
+                    tmp = torch.where(per_c_rewards_tmp<0, torch.Tensor([1]).to(device), torch.Tensor([0]).to(device))
+                    outlier = fg.unsqueeze(0) - sub_per_c_rewards
+                    tmp = tmp + outlier
+                    tmp = torch.where(tmp==2, torch.Tensor([0]).to(device), torch.Tensor([1]).to(device))
+
+                    per_c_rewards = outlier * tmp + per_c_rewards_tmp
 
             else:
                 per_c_rewards = fill_connect
@@ -128,6 +133,7 @@ def connectivity_rewards(samples, fg_num, Fscale, Cscale, reward_type='hard', my
                 C_reward = per_c_rewards
             else:
                 C_reward = C_reward + per_c_rewards
+
 
         if counter == 0:
             C_rewards = C_reward
