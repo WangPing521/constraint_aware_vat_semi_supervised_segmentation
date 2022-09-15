@@ -292,8 +292,8 @@ class reinforce_cons_loss(nn.Module):
             C_rewards = connectivity_rewards(samples=samples, fg_num=fg_num, Fscale=self._Fscale, Cscale=self._Cscale,
                                              reward_type=self._reward_type, my_connectivity=self._my_connectivity, run_state=self._run_state)
         elif self._constraint == "convexity":
-            samples = samples.transpose(1, 0)
-            C_rewards = convexity_descriptor(samples, reward_type=self._reward_type)
+            # samples = samples.transpose(1, 0)
+            C_rewards = convexity_descriptor(samples, reward_type=self._reward_type).transpose(1, 0)
             C_rewards = C_rewards.transpose(1, 0)
         assert probs.shape == C_rewards.shape
         #todo: save probs, samples, and rewards(C_rewards)
@@ -302,10 +302,8 @@ class reinforce_cons_loss(nn.Module):
         if mode in ['cat'] and unlab_filename is not None:
             if cur_batch == 0:
                 # img1
-                if self._reward_type in ['hard']:
-                    reward_plot = torch.where(-C_rewards == -1, torch.Tensor([0]).to(device), -C_rewards)
-                elif self._reward_type in ['soft']:
-                    reward_plot = torch.where(-C_rewards == -1, torch.Tensor([0]).to(device), C_rewards)
+                C_rewards_tmp = torch.where(C_rewards == 1, torch.Tensor([0]).to(device), C_rewards)
+                reward_plot = - C_rewards_tmp
 
                 joint1 = torch.cat([samples[-1][0].unsqueeze(0), probs[-1][0].unsqueeze(0)], 0)
                 joint1 = torch.cat([joint1, reward_plot[-1][0].unsqueeze(0)], 0)

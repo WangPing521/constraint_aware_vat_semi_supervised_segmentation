@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from typing import Union
-
+from tqdm import tqdm
 import torch
 from torch.utils.data import DataLoader
 from torch.utils.data.dataloader import _BaseDataLoaderIter
@@ -130,7 +130,7 @@ class BaseTrainer(_Trainer):
             **kwargs,
     ):
         self._model.set_mode(mode)
-        batch_indicator = tqdm_(range(self._num_batches))
+        batch_indicator = tqdm(range(self._num_batches))
         batch_indicator.set_description(f"Training Epoch {epoch:03d}")
         sum_disc, count = 0, 0
         reg_loss, rein_cons = 0, 0
@@ -180,7 +180,7 @@ class BaseTrainer(_Trainer):
 
             if ((batch_id + 1) % 5) == 0:
                 report_statue = self._meter_interface.tracking_status("train")
-                batch_indicator.set_postfix(flatten_dict(report_statue))
+                # batch_indicator.set_postfix(flatten_dict(report_statue))
 
         if self._config['Trainer']['name'] in ['consVat', 'MTconsvat', 'cotconsVAT', 'constraintReg', 'Pseudolike']:
             if self.constraint == "connectivity":
@@ -191,8 +191,10 @@ class BaseTrainer(_Trainer):
                     self._meter_interface[f'train_c0non_con'].add((sum_disc / count).cpu())
                 except:
                     self._meter_interface[f'train_c0non_con'].add((torch.Tensor([sum_disc]) / count).cpu())
+
         report_statue = self._meter_interface.tracking_status("train")
         batch_indicator.set_postfix(flatten_dict(report_statue))
+
         self.writer.add_scalar_with_tag(
             "train", flatten_dict(report_statue), global_step=epoch
         )

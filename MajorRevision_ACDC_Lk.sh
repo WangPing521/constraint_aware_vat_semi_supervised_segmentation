@@ -15,6 +15,9 @@ unlab_ratio1=$(python -c "print(1-${ratio1})")
 
 declare -a StringArray=(
 
+#l is used to fix the seed for floodfill, which is make no difference with vary value
+
+#k is means the local constraint
 
 
 

@@ -14,7 +14,7 @@ Scheduler:
     multiplier: 300
     total_epoch: 10
 
-Dataset: prostateDK # acdc, prostate, spleen, prostateDK
+Dataset: acdc # acdc, prostate, spleen, prostateDK
 Foreground: all # LV, Myo, RV, all
 
 Data:
@@ -27,7 +27,7 @@ DataLoader:
   unlabeled_batch_size: 4
   val_batch_size: 6
   shuffle: True
-  num_workers: 2
+  num_workers: 0
   pin_memory: False
 
 Trainer:
@@ -39,13 +39,13 @@ Trainer:
   checkpoint_path: runs
 
 RegScheduler:
-  begin_epoch: 5
+  begin_epoch: 0 # 5
   max_epoch: 50
   min_value: 0
   max_value: 0
 
 ConstraintWeightScheduler:
-  begin_epoch: 10
+  begin_epoch: 0 # 10
   max_epoch: 50
   min_value: 0
   max_value: 0
