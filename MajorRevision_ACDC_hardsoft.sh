@@ -8,7 +8,7 @@ source $CC_WRAPPER_PATH
 
 time=10
 account=def-chdesa
-save_dir=0915_hard_soft
+save_dir=0916_hard_soft
 
 ratio1=0.03
 unlab_ratio1=$(python -c "print(1-${ratio1})")
