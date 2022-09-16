@@ -59,7 +59,7 @@ VATsettings:
 Constraints:
   examples: adv_examples # adv_examples  original_unlab  both
   Constraint: connectivity  # connectivity, convexity
-  num_samples: 10
+  num_samples: 5
   reward_type: soft # hard, soft
   reverse_indicator: True # False: FGBG; True: reverse_FGBG
   Connectivity:

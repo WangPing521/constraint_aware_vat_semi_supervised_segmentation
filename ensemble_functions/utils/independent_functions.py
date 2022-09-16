@@ -384,22 +384,17 @@ def plot_joint_matrix(file_name, joint: Tensor):
 
             img = joint[i1 - 1, i2 - 1]
             im_ = ax.imshow(img)
-
+# inferno
             divider = make_axes_locatable(ax)
             cax = divider.append_axes("right", size="5%", pad=0.05)
             fig.colorbar(im_, cax=cax, orientation='vertical')
     return fig
 
-def plot_seg(img, label):
-    # img_volume = img.squeeze(0)
+def plot_seg(img):
     fig = plt.figure()
-    plt.title(f'{img}')
-    # img_volume = tensor2plotable(img_volume)
-    # plt.imshow(img_volume, cmap="gray")
-    gt_volume = tensor2plotable(label)
-    # con = plt.contour(gt_volume)
-    plt.imshow(gt_volume, alpha=1, cmap="viridis")
-    # plt.show(block=False)
+    gt_volume = tensor2plotable(img.cpu().numpy())
+    plt.imshow(gt_volume, cmap = 'viridis', interpolation = 'nearest')
+    plt.colorbar()
     return fig
 
 def plot_feature(img):

@@ -109,21 +109,19 @@ def connectivity_rewards(samples, fg_num, Fscale, Cscale, reward_type='hard', my
                                            F_fg_neigbors.float())
                 sc_nonzerobg = torch.where(S_fg_neigbors.float() == 0, torch.Tensor([-2]).to(device),
                                            S_fg_neigbors.float())
-                if reward_type == 'hard':
-                    per_c_rewards_tmp = (fc_nonzerobg == sc_nonzerobg).float().transpose(1, 0)
-                    per_c_rewards = (fg - per_c_rewards_tmp) - per_c_rewards_tmp
 
-                elif reward_type == 'soft':
-                    S_fg_neigbors1 = torch.where(S_fg_neigbors.float() == 0, torch.Tensor([1]).to(device),
+                x = (fc_nonzerobg == sc_nonzerobg).float().transpose(1, 0)
+
+                S_fg_neigbors1 = torch.where(S_fg_neigbors.float() == 0, torch.Tensor([1]).to(device),
                                 S_fg_neigbors.float())
-                    per_c_rewards_tmp = -(F_fg_neigbors / S_fg_neigbors1).transpose(1,0)
-
-                    sub_per_c_rewards = (fc_nonzerobg == sc_nonzerobg).float().transpose(1, 0)
-                    tmp = torch.where(per_c_rewards_tmp<0, torch.Tensor([1]).to(device), torch.Tensor([0]).to(device))
-                    outlier = fg.unsqueeze(0) - sub_per_c_rewards
-                    tmp = tmp + outlier
-                    tmp = torch.where(tmp==2, torch.Tensor([0]).to(device), torch.Tensor([1]).to(device))
-
+                per_c_rewards_tmp = -(F_fg_neigbors / S_fg_neigbors1).transpose(1,0)
+                tmp = torch.where(per_c_rewards_tmp<0, torch.Tensor([1]).to(device), torch.Tensor([0]).to(device))
+                outlier = fg.unsqueeze(0) - x
+                tmp = tmp + outlier
+                tmp = torch.where(tmp==2, torch.Tensor([0]).to(device), torch.Tensor([1]).to(device))
+                if reward_type == 'hard':
+                    per_c_rewards = (fg - x) - x
+                elif reward_type == 'soft':
                     per_c_rewards = outlier * tmp + per_c_rewards_tmp
 
             else:
@@ -305,54 +303,28 @@ class reinforce_cons_loss(nn.Module):
         #todo: save probs, samples, and rewards(C_rewards)
         assert probs.shape == samples.shape == C_rewards.shape
 
-        # if mode in ['cat'] and unlab_filename is not None:
-        #     if cur_batch == 0:
-        #         # img1
-        #         C_rewards_tmp = torch.where(C_rewards == 1, torch.Tensor([0]).to(device), C_rewards)
-        #         reward_plot = - C_rewards_tmp
-        #
-        #         joint1 = torch.cat([samples[-1][0].unsqueeze(0), probs[-1][0].unsqueeze(0)], 0)
-        #         joint1 = torch.cat([joint1, reward_plot[-1][0].unsqueeze(0)], 0)
-        #         joint1 = joint1.unsqueeze(0)
-        #         # joint, sample+prob+reward
-        #         sample1 = plot_joint_matrix(unlab_filename[-1], joint1)
-        #         writer.add_figure(tag=f"train_img1_samples1", figure=sample1, global_step=cur_epoch, close=True)
-        #
-        #         joint2 = torch.cat([samples[-1][1].unsqueeze(0), probs[-1][1].unsqueeze(0)], 0)
-        #         joint2 = torch.cat([joint2, reward_plot[-1][1].unsqueeze(0)], 0)
-        #         joint2 = joint2.unsqueeze(0)
-        #         # joint, sample+prob+reward
-        #         sample2 = plot_joint_matrix(unlab_filename[-1], joint2)
-        #         writer.add_figure(tag=f"train_img1_samples2", figure=sample2, global_step=cur_epoch, close=True)
-        #
-        #         joint3 = torch.cat([samples[-1][2].unsqueeze(0), probs[-1][2].unsqueeze(0)], 0)
-        #         joint3 = torch.cat([joint3, reward_plot[-1][2].unsqueeze(0)], 0)
-        #         joint3 = joint3.unsqueeze(0)
-        #         # joint, sample+prob+reward
-        #         sample3 = plot_joint_matrix(unlab_filename[-1], joint3)
-        #         writer.add_figure(tag=f"train_img1_samples3", figure=sample3, global_step=cur_epoch, close=True)
-        #
-        #         #img2
-        #         joint21 = torch.cat([samples[-2][0].unsqueeze(0), probs[-2][0].unsqueeze(0)], 0)
-        #         joint21 = torch.cat([joint21, reward_plot[-2][0].unsqueeze(0)], 0)
-        #         joint21 = joint21.unsqueeze(0)
-        #         # joint, sample+prob+reward
-        #         sample21 = plot_joint_matrix(unlab_filename[-2], joint21)
-        #         writer.add_figure(tag=f"train_img2_samples1", figure=sample21, global_step=cur_epoch, close=True)
-        #
-        #         joint22 = torch.cat([samples[-2][1].unsqueeze(0), probs[-2][1].unsqueeze(0)], 0)
-        #         joint22 = torch.cat([joint22, reward_plot[-2][1].unsqueeze(0)], 0)
-        #         joint22 = joint22.unsqueeze(0)
-        #         # joint, sample+prob+reward
-        #         sample22 = plot_joint_matrix(unlab_filename[-2], joint22)
-        #         writer.add_figure(tag=f"train_img2_samples2", figure=sample22, global_step=cur_epoch, close=True)
-        #
-        #         joint23 = torch.cat([samples[-2][2].unsqueeze(0), probs[-2][2].unsqueeze(0)], 0)
-        #         joint23 = torch.cat([joint23, reward_plot[-2][2].unsqueeze(0)], 0)
-        #         joint23 = joint23.unsqueeze(0)
-        #         # joint, sample+prob+reward
-        #         sample23 = plot_joint_matrix(unlab_filename[-2], joint23)
-        #         writer.add_figure(tag=f"train_img2_samples3", figure=sample23, global_step=cur_epoch, close=True)
+        if mode in ['cat'] and unlab_filename is not None:
+            if cur_batch == 0:
+                # img1
+                C_rewards_tmp = torch.where(C_rewards == 1, torch.Tensor([0]).to(device), C_rewards)
+                reward_plot = - C_rewards_tmp
+
+                joint1 = torch.cat([samples[-1][0].unsqueeze(0), probs[-1][0].unsqueeze(0)], 0)
+                joint1 = joint1.unsqueeze(0)
+                # joint, sample+prob+reward
+                sample1 = plot_joint_matrix(unlab_filename[-1], joint1)
+                rewad_map = plot_seg(reward_plot[-1][0])
+                writer.add_figure(tag=f"train_img1_samples1", figure=sample1, global_step=cur_epoch, close=True)
+                writer.add_figure(tag=f"train_img1_samples1_reward", figure=rewad_map, global_step=cur_epoch, close=True)
+
+                #img2
+                joint21 = torch.cat([samples[-2][0].unsqueeze(0), probs[-2][0].unsqueeze(0)], 0)
+                joint21 = joint21.unsqueeze(0)
+                # joint, sample+prob+reward
+                sample21 = plot_joint_matrix(unlab_filename[-2], joint21)
+                rewad_map2 = plot_seg(reward_plot[-2][0])
+                writer.add_figure(tag=f"train_img2_samples", figure=rewad_map2, global_step=cur_epoch, close=True)
+                writer.add_figure(tag=f"train_img2_samples_reward", figure=rewad_map2, global_step=cur_epoch, close=True)
 
 
         # avg_reward = ((1 / C_rewards.transpose(1, 0).shape[1]) * C_rewards.transpose(1, 0).sum(dim=1)).unsqueeze(1)
