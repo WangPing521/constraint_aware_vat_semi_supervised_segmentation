@@ -20,7 +20,7 @@ dictitems:
     examples: adv_examples
     num_samples: 5
     reverse_indicator: true
-    reward_type: hard
+    reward_type: soft
   Data:
     labeled_data_ratio: 0.05
     seed: 12
