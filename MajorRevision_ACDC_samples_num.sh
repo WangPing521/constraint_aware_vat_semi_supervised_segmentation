@@ -10,7 +10,7 @@ time=6
 account=def-chdesa
 save_dir=0921_numsamples
 
-ratio1=0.03
+ratio1=0.05
 unlab_ratio1=$(python -c "print(1-${ratio1})")
 
 declare -a StringArray=(
