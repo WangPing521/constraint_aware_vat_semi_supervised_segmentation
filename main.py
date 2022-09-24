@@ -98,11 +98,24 @@ trainer = trainer_name(
     **config['Trainer']
 )
 
-# trainer.inference(identifier='last.pth')
+trainer.inference(identifier='last.pth')
 trainer.start_training()
 
-
-
+# from tqdm import tqdm
+# def val_img_gt(val_loader):
+#
+#     val_indicator = tqdm(val_loader)
+#     for batch_id, data in enumerate(val_indicator):
+#         image, target, filename = (
+#             data[0][0].to('cpu'),
+#             data[0][1].to('cpu'),
+#             data[1],
+#         )
+#
+#         save_images((image*255).squeeze(1), names=filename, root='prostate', mode='img', iter=0)
+#         save_images(target.squeeze(1), names=filename, root='prostate', mode='gt', iter=0)
+#
+# val_img_gt(val_loader)
 
 
 
