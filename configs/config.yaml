@@ -54,7 +54,7 @@ MinEntropy: False
 
 VATsettings:
   pertur_eps: 0.0001
-  Temperature: 1
+  Temperature: 0.5
 
 Constraints:
   examples: adv_examples # adv_examples  original_unlab  both
