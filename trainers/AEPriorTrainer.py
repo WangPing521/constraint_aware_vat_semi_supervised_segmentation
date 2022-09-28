@@ -1,9 +1,10 @@
 from ensemble_functions.loss_functions.general_loss import SimplexCrossEntropyLoss
-from ensemble_functions.loss_functions.vat_loss import VATLoss
 from ensemble_functions.utils.independent_functions import class2one_hot, simplex
+from networks.autoencoder import ConvAE
 from trainers.BaseTrainer import BaseTrainer
 import torch
-
+from torch import optim
+import torch.nn.functional as F
 
 class AEPriorTrainer(BaseTrainer):
     def __init__(self,
@@ -38,6 +39,9 @@ class AEPriorTrainer(BaseTrainer):
                              **kwargs)
 
         self._ce_criterion = SimplexCrossEntropyLoss()
+        self.AE_prior = ConvAE(channel=1, num_classes=1, latent_num=512)
+        optimizer_D = optim.Adam(self.AE_prior.parameters(), lr=2e-4, weight_decay=0.0001)
+
 
     def _run_step(self, lab_data, unlab_data):
 
@@ -50,7 +54,7 @@ class AEPriorTrainer(BaseTrainer):
             unlab_data[0][0].to(self._device),
             unlab_data[0][1].to(self._device),
         )
-        lab_preds = self._model[0](image).softmax(1)
+
         if self._config['Dataset'] == "acdc":
             # test on the task of binary segmentation
             # bg: 0     RV: 1     MYO: 2    LV: 3
@@ -68,9 +72,17 @@ class AEPriorTrainer(BaseTrainer):
         onehot_target = class2one_hot(
             target.squeeze(1), self._config['Arch']['num_classes']
         )
+
+        lab_preds = self._model[0](image).softmax(1)
+        recon_pred, code_pred = self.AE_prior (F.sigmoid(lab_preds))
+        recon_gt, code_gt = self.AE_prior (F.sigmoid(onehot_target))
+
         sup_loss = self._ce_criterion(lab_preds, onehot_target)
 
+
         pred = (self._model[0](uimage) / self.tmp).softmax(1)
+
+        recon_pred, code_pred = self.AE_prior (F.sigmoid(dd))
 
 
         self._meter_interface[f"train{0}_dice"].add(
