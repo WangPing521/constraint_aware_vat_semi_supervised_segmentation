@@ -38,8 +38,6 @@ class AEPriorTrainer(BaseTrainer):
                              **kwargs)
 
         self._ce_criterion = SimplexCrossEntropyLoss()
-        self.tmp = self._config['VATsettings']['Temperature']
-        self.vatloss = VATLoss(eps=self._config['VATsettings']['pertur_eps'], temp=self.tmp)
 
     def _run_step(self, lab_data, unlab_data):
 
@@ -83,7 +81,60 @@ class AEPriorTrainer(BaseTrainer):
 
         return sup_loss, prior_loss
 
+    def _train_loop(
+            self,
+            lab_loader: Union[DataLoader, _BaseDataLoaderIter] = None,
+            unlab_loader: Union[DataLoader, _BaseDataLoaderIter] = None,
+            epoch: int = 0,
+            mode=ModelMode.TRAIN,
+            *args,
+            **kwargs,
+    ):
+        self._model.set_mode(mode)
+        batch_indicator = tqdm(range(self._num_batches))
+        batch_indicator.set_description(f"Training Epoch {epoch:03d}")
+        sum_disc, count = 0, 0
+        reg_loss, rein_cons = 0, 0
+        s_co = min(1 - 1 / (epoch + 1), 0.999)
+        for batch_id, lab_data, unlab_data in zip(batch_indicator, lab_loader, unlab_loader):
 
+            sup_loss, reg_loss = self.run_step(lab_data=lab_data, unlab_data=unlab_data)
+
+            with ZeroGradientBackwardStep(
+                    sup_loss + self._weight_scheduler.value * reg_loss + self._constraint_scheduler.value * rein_cons,
+                    self._model
+            ) as loss:
+                loss.backward()
+
+            self._meter_interface['total_loss'].add(loss.item())
+            self._meter_interface['sup_loss'].add(sup_loss.item())
+
+            self._meter_interface['reg_loss'].add(reg_loss.item())
+
+            if ((batch_id + 1) % 5) == 0:
+                report_statue = self._meter_interface.tracking_status("train")
+                # batch_indicator.set_postfix(flatten_dict(report_statue))
+
+        if self._config['Trainer']['name'] in ['consVat', 'MTconsvat', 'cotconsVAT', 'constraintReg', 'Pseudolike']:
+            if self.constraint == "connectivity":
+                for i in range(self._config['Arch']['num_classes']-1):
+                    self._meter_interface[f'train_c{i}non_con'].add((sum_disc[i] / count).cpu())
+            else:
+                try:
+                    self._meter_interface[f'train_c0non_con'].add((sum_disc / count).cpu())
+                except:
+                    self._meter_interface[f'train_c0non_con'].add((torch.Tensor([sum_disc]) / count).cpu())
+
+        report_statue = self._meter_interface.tracking_status("train")
+        batch_indicator.set_postfix(flatten_dict(report_statue))
+
+        self.writer.add_scalar_with_tag(
+            "train", flatten_dict(report_statue), global_step=epoch
+        )
+        try:
+            print(f"Training Epoch {epoch}: {nice_dict(flatten_dict(report_statue))}")
+        except:
+            print(report_statue)
 
 
 
