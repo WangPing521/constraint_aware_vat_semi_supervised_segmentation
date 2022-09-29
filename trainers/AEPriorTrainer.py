@@ -1,7 +1,7 @@
 from typing import Union
 from ensemble_functions.utils.ensembel_model import ZeroGradientBackwardStep
 from ensemble_functions.loss_functions.general_loss import SimplexCrossEntropyLoss
-from ensemble_functions.utils.independent_functions import class2one_hot
+from ensemble_functions.utils.independent_functions import class2one_hot, flatten_dict, nice_dict
 from networks.autoencoder import ConvAE
 from trainers.BaseTrainer import BaseTrainer
 import torch
