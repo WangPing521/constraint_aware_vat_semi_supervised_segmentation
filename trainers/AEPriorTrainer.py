@@ -83,7 +83,7 @@ class AEPriorTrainer(BaseTrainer):
 
         lab_preds = self._model[0](image).softmax(1)
         recon_pred, code_pred = self.AE_prior(F.sigmoid(lab_preds))
-        recon_gt, code_gt = self.AE_prior (F.sigmoid(onehot_target))
+        recon_gt, code_gt = self.AE_prior(F.sigmoid(onehot_target.to(torch.float32)))
 
         sup_loss = self._ce_criterion(lab_preds, onehot_target)
         latent_loss = self.mse(code_pred, code_gt)
