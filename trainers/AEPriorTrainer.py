@@ -1,11 +1,12 @@
 from typing import Union
-
+from ensemble_functions.utils.ensembel_model import ZeroGradientBackwardStep
 from ensemble_functions.loss_functions.general_loss import SimplexCrossEntropyLoss
-from ensemble_functions.utils.independent_functions import class2one_hot, simplex
+from ensemble_functions.utils.independent_functions import class2one_hot
 from networks.autoencoder import ConvAE
 from trainers.BaseTrainer import BaseTrainer
 import torch
 from torch import optim
+import torch.nn as nn
 import torch.nn.functional as F
 from ensemble_functions.utils.getmodel_tool import ModelMode
 from torch.utils.data import DataLoader
@@ -45,9 +46,10 @@ class AEPriorTrainer(BaseTrainer):
                              **kwargs)
 
         self._ce_criterion = SimplexCrossEntropyLoss()
-        self.AE_prior = ConvAE(channel=1, num_classes=1, latent_num=512)
+        self.AE_prior = ConvAE(channel=4, num_classes=4, latent_num=512)
+        self.AE_prior.to(self._device)
         self.optimizer_D = optim.Adam(self.AE_prior.parameters(), lr=2e-4, weight_decay=0.0001)
-
+        self.mse = nn.MSELoss()
 
     def _run_step(self, lab_data, unlab_data):
 
@@ -84,9 +86,9 @@ class AEPriorTrainer(BaseTrainer):
         recon_gt, code_gt = self.AE_prior (F.sigmoid(onehot_target))
 
         sup_loss = self._ce_criterion(lab_preds, onehot_target)
-        latent_loss = F.mse(code_pred, code_gt)
+        latent_loss = self.mse(code_pred, code_gt)
 
-        pred_unlab = (self._model[0](uimage) / self.tmp).softmax(1)
+        pred_unlab = (self._model[0](uimage)).softmax(1)
         semi_loss = self._entropy_criterion(pred_unlab)
         with ZeroGradientBackwardStep(
                 sup_loss + self._weight_scheduler.value * semi_loss + self._constraint_scheduler.value * latent_loss,
@@ -95,16 +97,13 @@ class AEPriorTrainer(BaseTrainer):
             seg_loss.backward()
 
         # update Auto encoder
-        recon_pred, code_pred = self.AE_prior(F.sigmoid(lab_preds.detatch()))
+        self.optimizer_D.zero_grad()
+        recon_pred, code_pred = self.AE_prior(F.sigmoid(lab_preds.detach()))
         recon_gt, code_gt = self.AE_prior(F.sigmoid(onehot_target))
 
-        recon_loss = F.mse(recon_pred, lab_preds.detatch()) +  F.mse(recon_gt, onehot_target)
-
-        with ZeroGradientBackwardStep(
-                recon_loss,
-                self.AE_prior
-        ) as ae_loss:
-            ae_loss.backward()
+        recon_loss = self.mse(recon_pred, lab_preds.detach()) +  self.mse(recon_gt, onehot_target.to(torch.float32))
+        recon_loss.backward()
+        self.optimizer_D.step()
 
         self._meter_interface[f"train{0}_dice"].add(
             lab_preds.max(1)[1],
@@ -112,7 +111,7 @@ class AEPriorTrainer(BaseTrainer):
             group_name=["_".join(x.split("_")[:-2]) for x in filename],
         )
 
-        return sup_loss, seg_loss, ae_loss
+        return sup_loss, seg_loss, recon_loss
 
     def _train_loop(
             self,
@@ -124,6 +123,7 @@ class AEPriorTrainer(BaseTrainer):
             **kwargs,
     ):
         self._model.set_mode(mode)
+        self.AE_prior.train()
         batch_indicator = tqdm(range(self._num_batches))
         batch_indicator.set_description(f"Training Epoch {epoch:03d}")
 
