@@ -9,6 +9,7 @@ from ensemble_functions.utils.configManager import ConfigManger
 from ensemble_functions.utils.ensembel_model import Model
 from ensemble_functions.utils.getmodel_tool import ModelList
 from ensemble_functions.utils.independent_functions import fix_all_seed, get_group_set, save_images
+from trainers.AEPriorTrainer import AEPriorTrainer
 from trainers.BaselinesTrainer import BaselinesTrainer
 from trainers.ConstraintCotVATTrainer import ConstraintCotVATTrainer
 from trainers.ConstraintTrainer import ConstraintTrainer
@@ -24,7 +25,7 @@ fix_all_seed(config['seed'])
 
 # model setting
 model1 = Model(config["Arch"], config["Optim"], config["Scheduler"])
-if config["Trainer"]["name"] in["Baselines", "NaiveVat", "consVat", "constraintReg", "Pseudolike"]:
+if config["Trainer"]["name"] in["Baselines", "NaiveVat", "consVat", "constraintReg", "Pseudolike", "AE_prior"]:
     model = ModelList([model1])
 elif config["Trainer"]["name"] == "co_training" or config["Trainer"]["name"] == "cotconsVAT":
     model2 = Model(config["Arch"], config["Optim"], config["Scheduler"])
@@ -83,7 +84,8 @@ Trainer_container = {
     "cotconsVAT": ConstraintCotVATTrainer,
     "MTconsvat": ConstraintMTVATTrainer,
     "constraintReg": ConstraintTrainer,
-    "Pseudolike": PseudoTrainer
+    "Pseudolike": PseudoTrainer,
+    "AE_prior": AEPriorTrainer
 }
 
 trainer_name = Trainer_container.get(config['Trainer'].get('name'))
