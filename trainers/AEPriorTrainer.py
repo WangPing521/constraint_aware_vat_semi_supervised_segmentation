@@ -99,7 +99,7 @@ class AEPriorTrainer(BaseTrainer):
         # update Auto encoder
         self.optimizer_D.zero_grad()
         recon_pred, code_pred = self.AE_prior(F.sigmoid(lab_preds.detach()))
-        recon_gt, code_gt = self.AE_prior(F.sigmoid(onehot_target))
+        recon_gt, code_gt = self.AE_prior(F.sigmoid(onehot_target.to(torch.float32)))
 
         recon_loss = self.mse(recon_pred, lab_preds.detach()) +  self.mse(recon_gt, onehot_target.to(torch.float32))
         recon_loss.backward()
