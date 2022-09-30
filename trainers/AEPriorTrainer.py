@@ -1,7 +1,7 @@
 from typing import Union
 from ensemble_functions.utils.ensembel_model import ZeroGradientBackwardStep
 from ensemble_functions.loss_functions.general_loss import SimplexCrossEntropyLoss
-from ensemble_functions.utils.independent_functions import class2one_hot, flatten_dict, nice_dict
+from ensemble_functions.utils.independent_functions import class2one_hot, flatten_dict, nice_dict, simplex, plot_joint_matrix
 from networks.autoencoder import ConvAE
 from trainers.BaseTrainer import BaseTrainer
 import torch
@@ -51,7 +51,7 @@ class AEPriorTrainer(BaseTrainer):
         self.optimizer_D = optim.Adam(self.AE_prior.parameters(), lr=2e-4, weight_decay=0.0001)
         self.mse = nn.MSELoss()
 
-    def _run_step(self, lab_data, unlab_data):
+    def _run_step(self, lab_data, unlab_data, epoch, batch_id):
 
         image, target, filename = (
             lab_data[0][0].to(self._device),
@@ -98,10 +98,14 @@ class AEPriorTrainer(BaseTrainer):
 
         # update Auto encoder
         self.optimizer_D.zero_grad()
-        recon_pred, code_pred = self.AE_prior(F.sigmoid(lab_preds.detach()))
-        recon_gt, code_gt = self.AE_prior(F.sigmoid(onehot_target.to(torch.float32)))
+        recon_predlab, code_predlab = self.AE_prior(F.sigmoid(lab_preds.detach()))
+        recon_gtlab, code_gtlab = self.AE_prior(F.sigmoid(onehot_target.to(torch.float32)))
+        recon_predlab = recon_predlab.softmax(1)
+        recon_gtlab = recon_gtlab.softmax(1)
+        assert simplex(recon_predlab)
+        assert simplex(recon_gtlab)
 
-        recon_loss = self.mse(recon_pred, lab_preds.detach()) +  self.mse(recon_gt, onehot_target.to(torch.float32))
+        recon_loss = self.mse(recon_predlab, lab_preds.detach()) +  self.mse(recon_gtlab, onehot_target.to(torch.float32)) + self.mse(code_predlab, code_gtlab)
         recon_loss.backward()
         self.optimizer_D.step()
 
@@ -110,6 +114,16 @@ class AEPriorTrainer(BaseTrainer):
             target.squeeze(1),
             group_name=["_".join(x.split("_")[:-2]) for x in filename],
         )
+
+        if batch_id == 0:
+            recon_predlabel = recon_predlab.max(1)[1]
+            recon_gtlabel = recon_gtlab.max(1)[1]
+            joint1 = torch.cat([target[-1][0].unsqueeze(0), recon_gtlabel[-1].unsqueeze(0)], 0)
+            joint1 = torch.cat([joint1, lab_preds.max(1)[1][-1].unsqueeze(0)], 0)
+            joint1 = torch.cat([joint1, recon_predlabel[-1].unsqueeze(0)], 0)
+            joint1 = joint1.unsqueeze(0)
+            sample1 = plot_joint_matrix(filename[-1], joint1)
+            self.writer.add_figure(tag=f"recons", figure=sample1, global_step=epoch, close=True)
 
         return sup_loss, seg_loss, recon_loss
 
@@ -129,7 +143,7 @@ class AEPriorTrainer(BaseTrainer):
 
         for batch_id, lab_data, unlab_data in zip(batch_indicator, lab_loader, unlab_loader):
 
-            sup_loss, seg_loss, recon_loss = self.run_step(lab_data=lab_data, unlab_data=unlab_data)
+            sup_loss, seg_loss, recon_loss = self.run_step(lab_data=lab_data, unlab_data=unlab_data, epoch=epoch, batch_id=batch_id)
 
             self._meter_interface['total_loss'].add(seg_loss.item())
             self._meter_interface['sup_loss'].add(sup_loss.item())
