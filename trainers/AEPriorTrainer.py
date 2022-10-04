@@ -50,6 +50,7 @@ class AEPriorTrainer(BaseTrainer):
         self.AE_prior.to(self._device)
         self.optimizer_D = optim.Adam(self.AE_prior.parameters(), lr=2e-4, weight_decay=0.0001)
         self.mse = nn.MSELoss()
+        self.adv_reg = self._config['adv_reg']
 
     def _run_step(self, lab_data, unlab_data, epoch, batch_id):
 
@@ -91,7 +92,7 @@ class AEPriorTrainer(BaseTrainer):
         pred_unlab = (self._model[0](uimage)).softmax(1)
         semi_loss = self._entropy_criterion(pred_unlab)
         with ZeroGradientBackwardStep(
-                sup_loss + self._weight_scheduler.value * semi_loss + 5 * latent_loss,
+                sup_loss + self._weight_scheduler.value * semi_loss + self.adv_reg * latent_loss,
                 self._model
         ) as seg_loss:
             seg_loss.backward()

@@ -50,6 +50,8 @@ ConstraintWeightScheduler:
   min_value: 0
   max_value: 0
 
+adv_reg: 5
+
 MinEntropy: False
 
 VATsettings:
