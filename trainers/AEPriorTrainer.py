@@ -91,7 +91,7 @@ class AEPriorTrainer(BaseTrainer):
         pred_unlab = (self._model[0](uimage)).softmax(1)
         semi_loss = self._entropy_criterion(pred_unlab)
         with ZeroGradientBackwardStep(
-                sup_loss + self._weight_scheduler.value * semi_loss + self._constraint_scheduler.value * latent_loss,
+                sup_loss + self._weight_scheduler.value * semi_loss + 5 * latent_loss,
                 self._model
         ) as seg_loss:
             seg_loss.backward()
@@ -105,7 +105,7 @@ class AEPriorTrainer(BaseTrainer):
         assert simplex(recon_predlab)
         assert simplex(recon_gtlab)
 
-        recon_loss = self.mse(recon_predlab, lab_preds.detach()) +  self.mse(recon_gtlab, onehot_target.to(torch.float32)) + self.mse(code_predlab, code_gtlab)
+        recon_loss = self.mse(recon_predlab, lab_preds.detach()) +  self.mse(recon_gtlab, onehot_target.to(torch.float32)) - self._constraint_scheduler.value * self.mse(code_predlab, code_gtlab)
         recon_loss.backward()
         self.optimizer_D.step()
 
