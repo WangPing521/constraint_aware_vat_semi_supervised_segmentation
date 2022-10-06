@@ -7,6 +7,8 @@ Optim:
   name: RAdam
   lr: 0.00001
 
+ae_lr: 0.0002
+
 Scheduler:
   name: CosineAnnealingLR
   T_max: 90
