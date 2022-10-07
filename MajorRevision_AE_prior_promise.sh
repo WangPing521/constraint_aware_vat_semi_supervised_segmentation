@@ -6,7 +6,7 @@ CC_WRAPPER_PATH="CC_wrapper.sh"
 
 source $CC_WRAPPER_PATH
 
-time=7
+time=2
 account=def-chdesa
 save_dir=1006_AEprior_promise12
 
