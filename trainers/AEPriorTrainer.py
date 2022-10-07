@@ -46,7 +46,7 @@ class AEPriorTrainer(BaseTrainer):
                              **kwargs)
 
         self._ce_criterion = SimplexCrossEntropyLoss()
-        self.AE_prior = ConvAE(channel=4, num_classes=4, latent_num=512)
+        self.AE_prior = ConvAE(channel=self._config['Arch']['num_classes'], num_classes=self._config['Arch']['num_classes'], latent_num=512)
         self.AE_prior.to(self._device)
         self.optimizer_D = optim.Adam(self.AE_prior.parameters(), lr=self._config['ae_lr'], weight_decay=0.0001)
         self.mse = nn.MSELoss()
