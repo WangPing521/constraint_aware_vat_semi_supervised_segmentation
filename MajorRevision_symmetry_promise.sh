@@ -8,7 +8,7 @@ source $CC_WRAPPER_PATH
 
 time=7
 account=def-chdesa
-save_dir=1006_AEprior_promise12_runs
+save_dir=1021_symmetry_promise
 
 ratio1=0.08
 unlab_ratio1=$(python -c "print(1-${ratio1})")
