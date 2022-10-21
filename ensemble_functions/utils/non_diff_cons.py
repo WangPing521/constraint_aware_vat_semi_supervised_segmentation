@@ -124,6 +124,7 @@ def symmetry_descriptor(x: Tensor, reward_type='hard'):
             for center_position_unk in center_line:
                 yy = 2 * center_position_unk - contour_index[2][min(sample_contouridx[0]):max(sample_contouridx[0]) + 1]
                 yy = torch.where(yy > 191, torch.Tensor([191.]).to(device), yy)
+                yy = torch.where(yy < 0, torch.Tensor([0.]).to(device), yy)
 
                 all_shape_tmp[contour_index[1][sample_contouridx], yy.long()] = 1
                 symmetry_error_tmp = all_shape_tmp - fg_contour[i]
