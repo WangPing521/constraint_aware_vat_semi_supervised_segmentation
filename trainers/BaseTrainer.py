@@ -11,7 +11,7 @@ from ensemble_functions.scheduler.customized_scheduler import RampScheduler
 from ensemble_functions.utils.ensembel_model import ZeroGradientBackwardStep
 from ensemble_functions.utils.getmodel_tool import ModelList, ModelMode
 from ensemble_functions.utils.independent_functions import tqdm_, flatten_dict, nice_dict, save_images, average_list
-from ensemble_functions.utils.non_diff_cons import metric_connectivity, metric_convexity
+from ensemble_functions.utils.non_diff_cons import metric_connectivity, metric_convexity, symmetry_error
 from meters_record.averagemeter import AverageValueMeter
 from meters_record.general_dice_meter import UniversalDice
 from trainers.AbstractTrainer import _Trainer
@@ -103,6 +103,10 @@ class BaseTrainer(_Trainer):
         self._meter_interface.register_new_meter(
             f"val_mean_non_conv", AverageValueMeter(), group_name="val"
         )
+        self._meter_interface.register_new_meter(
+            f"val_mean_non_sym", AverageValueMeter(), group_name="val"
+        )
+
 
         for i in range(self._config['Arch']['num_classes']-1):
             self._meter_interface.register_new_meter(
@@ -211,7 +215,7 @@ class BaseTrainer(_Trainer):
         **kwargs,
     ) -> float:
         self._model.set_mode(mode)
-        count, avg_cn_reward, avg_cv_reward = 0, 0, 0
+        count, avg_cn_reward, avg_cv_reward, avg_sym_reward = 0, 0, 0, 0
         val_indicator = tqdm(val_loader)
         val_indicator.set_description(f"Val_Epoch {epoch:03d}")
         for batch_id, data in enumerate(val_indicator):
@@ -256,6 +260,10 @@ class BaseTrainer(_Trainer):
                 non_convex, val_hull, val_contour = metric_convexity(ensemble.max(1)[1])
                 avg_cv_reward = avg_cv_reward + non_convex
 
+            if self.constraint == "symmetry":
+                error = symmetry_error(ensemble.max(1)[1])
+                avg_sym_reward = avg_sym_reward + error
+
             avg_cn_reward = avg_cn_reward + non_connect
             count = count + 1
 
@@ -277,6 +285,12 @@ class BaseTrainer(_Trainer):
             self._meter_interface[f'val_mean_non_conv'].add((avg_cv_reward/count).cpu())
         except:
             self._meter_interface[f'val_mean_non_conv'].add((torch.Tensor([avg_cv_reward])/count).cpu())
+
+        try:
+            self._meter_interface[f'val_mean_non_sym'].add((avg_sym_reward/count).cpu())
+        except:
+            self._meter_interface[f'val_mean_non_sym'].add((torch.Tensor([avg_sym_reward])/count).cpu())
+
 
         for i in range(self._config['Arch']['num_classes']-1):
             if self.constraint == "connectivity":

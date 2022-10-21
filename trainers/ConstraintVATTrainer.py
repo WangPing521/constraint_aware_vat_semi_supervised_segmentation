@@ -1,7 +1,7 @@
 from ensemble_functions.loss_functions.cons_vat_loss import consVATLoss
 from ensemble_functions.loss_functions.general_loss import SimplexCrossEntropyLoss
 from ensemble_functions.utils.independent_functions import class2one_hot, simplex
-from ensemble_functions.utils.non_diff_cons import metric_convexity
+from ensemble_functions.utils.non_diff_cons import metric_convexity, symmetry_error
 from trainers.BaseTrainer import BaseTrainer
 import torch
 
@@ -94,6 +94,8 @@ class ConstraintVATTrainer(BaseTrainer):
             non_con = self.report_constriant(pred, utarget)
         elif self.constraint == "convexity":
             non_con, hull, contour = metric_convexity(pred.max(1)[1])
+        elif self.constraint == "symmetry":
+            non_con = symmetry_error(pred.max(1)[1])
 
         self._meter_interface[f"train{0}_dice"].add(
             lab_preds.max(1)[1],

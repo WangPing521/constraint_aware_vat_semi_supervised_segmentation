@@ -5,7 +5,7 @@ dictitems:
   Arch:
     input_dim: 1
     name: enet
-    num_classes: 4
+    num_classes: 2
   ConstraintWeightScheduler:
     begin_epoch: 10
     max_epoch: 50
@@ -16,7 +16,7 @@ dictitems:
       diag_connectivity: 1
       flood_fill_Kernel: 5
       local_conn_Kernel: 3
-    Constraint: connectivity
+    Constraint: symmetry
     examples: adv_examples
     num_samples: 5
     reverse_indicator: true
@@ -32,7 +32,7 @@ dictitems:
     shuffle: true
     unlabeled_batch_size: 4
     val_batch_size: 6
-  Dataset: acdc
+  Dataset: prostate
   Foreground: all
   MinEntropy: false
   Optim:
@@ -55,10 +55,12 @@ dictitems:
     checkpoint_path: runs
     device: cuda
     max_epoch: 100
-    name: AE_prior
+    name: consVat
     num_batches: 200
     save_dir: runs
   VATsettings:
     Temperature: 0.5
     pertur_eps: 0.0001
+  adv_reg: 5
+  ae_lr: 0.0002
   seed: 1234567

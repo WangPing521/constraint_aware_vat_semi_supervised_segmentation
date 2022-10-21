@@ -9,6 +9,29 @@ from ensemble_functions.utils.independent_functions import average_list, plot_se
 
 device = 'cuda'
 
+def ContourEstimator(x:Tensor):
+    for i in range(x.shape[0]):
+        contours, hierarchy = cv2.findContours(x[i].squeeze(0).cpu().numpy().astype(dtype=np.uint8), 0, 1)
+        regions = []
+        for c in contours:
+            regions.append(cv2.contourArea(c))
+        convex_contour = (torch.zeros_like(x[i].squeeze(0))).cpu().numpy().astype(dtype=np.float32)
+        try:
+            max_id = np.argsort(-np.array(regions))[0]
+            # cv2.fillConvexPoly(convex_contour, cnt_max, (255, 0, 255))
+            convex_contour = cv2.drawContours(convex_contour, contours, max_id, 1, cv2.FILLED)
+            convex_contour = (torch.Tensor(convex_contour))
+        except:
+            print('no contour and no hull.')
+
+        if type(convex_contour) is np.ndarray:
+            convex_contour = torch.Tensor(convex_contour)
+        if i == 0:
+            convex_contours = convex_contour.unsqueeze(0)
+        else:
+            convex_contours = torch.cat([convex_contours, convex_contour.unsqueeze(0)], 0)
+    return convex_contours
+
 # samples and probability map
 def prob_sample(preds: Tensor, reverse_indicator=False, num_samples=10):
     # multinomial sampling
@@ -54,6 +77,72 @@ def prob_sample(preds: Tensor, reverse_indicator=False, num_samples=10):
             prob_ns = torch.cat([prob_ns, rein_prob.unsqueeze(1)], dim=1)
             sample_ns = torch.cat([sample_ns, sample_index.unsqueeze(1)], dim=1)
     return prob_ns, sample_ns  # [n,c,h,w] n: the number of images c: number of samples
+
+# horizontal symmetry
+def symmetry_error(x: Tensor):
+    batch_num = x.shape[0]
+    fg_contour = ContourEstimator(x).to(device)
+    contour_index = torch.where(fg_contour == 1)
+    error_list = []
+    for i in range(batch_num):
+        all_shape = torch.ones_like(fg_contour[i]) * fg_contour[i]
+        sample_contouridx = torch.where(contour_index[0] == i)
+        center_position = torch.floor(contour_index[2][sample_contouridx].float().mean())  # center
+
+        yy = 2 * center_position - contour_index[2][min(sample_contouridx[0]):max(sample_contouridx[0]) + 1]
+        yy = torch.where(yy > 255, torch.Tensor([255.]).to(device), yy)
+        all_shape[contour_index[1][sample_contouridx], yy.long()] = 1
+        symmetry_error_tmp = all_shape - fg_contour[i]
+        symmetry_error = symmetry_error_tmp.sum()
+
+        error = symmetry_error / all_shape.sum()
+        error_list.append(error)
+
+    symmetry_error = average_list(error_list)
+
+    return symmetry_error
+def symmetry_descriptor(x: Tensor, reward_type='hard'):
+    symmetry_errors_list, fg_contour_list = [], []
+    # x:  all_samples_images
+    for samples_img in x: # sample_list # samples_img: [3,1,256,256]
+        samples_img = samples_img.unsqueeze(1)
+        fg_contour = ContourEstimator(samples_img).to(device)
+        # todo: estimate symetry
+        contour_index = torch.where(fg_contour == 1)
+        num_samples = samples_img.shape[0]
+
+        for i in range(num_samples):
+            all_shape_tmp = torch.ones_like(fg_contour[i]) * fg_contour[i]
+            sample_contouridx = torch.where(contour_index[0] == i)
+            center_position = torch.floor(contour_index[2][sample_contouridx].float().mean())  # center
+
+            # center_line = [center_position-10, center_position-5, center_position-3, center_position, center_position+3, center_position+5, center_position+10]
+            center_line = [center_position-25, center_position, center_position + 25]
+            tmp = 36864
+            symmetry_error = torch.zeros_like(samples_img[i].squeeze(0))
+
+            for center_position_unk in center_line:
+                yy = 2 * center_position_unk - contour_index[2][min(sample_contouridx[0]):max(sample_contouridx[0]) + 1]
+                yy = torch.where(yy > 191, torch.Tensor([191.]).to(device), yy)
+
+                all_shape_tmp[contour_index[1][sample_contouridx], yy.long()] = 1
+                symmetry_error_tmp = all_shape_tmp - fg_contour[i]
+                select_center = symmetry_error_tmp.sum()
+
+                if select_center < tmp:
+                    symmetry_error = symmetry_error_tmp
+                    tmp = select_center
+
+            if i == 0:
+                symmetry_errors = symmetry_error.unsqueeze(0)
+            else:
+                symmetry_errors = torch.cat([symmetry_errors, symmetry_error.unsqueeze(0)], dim=0)
+        symmetry_errors_list.append(symmetry_errors)
+        fg_contour_list.append(fg_contour)
+
+        reward_list = [- fg + error for error, fg in zip(symmetry_errors_list, fg_contour_list)]
+
+    return reward_list
 
 # connectivity rewards
 def connectivity_rewards(samples, fg_num, Fscale, Cscale, reward_type='hard', my_connectivity=None, run_state='train'):
@@ -299,6 +388,10 @@ class reinforce_cons_loss(nn.Module):
             # samples = samples.transpose(1, 0)
             C_rewards = convexity_descriptor(samples, reward_type=self._reward_type).transpose(1, 0)
             C_rewards = C_rewards.transpose(1, 0)
+        elif self._constraint == "symmetry":
+            C_rewards = symmetry_descriptor(samples, reward_type=self._reward_type)
+            C_rewards = torch.stack(C_rewards)
+
         assert probs.shape == C_rewards.shape
         #todo: save probs, samples, and rewards(C_rewards)
         assert probs.shape == samples.shape == C_rewards.shape

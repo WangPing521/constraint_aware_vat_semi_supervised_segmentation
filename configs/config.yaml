@@ -1,7 +1,7 @@
 Arch:
   name: enet
   input_dim: 1
-  num_classes: 4  # 2, 3, 4
+  num_classes: 2  # 2, 3, 4
 
 Optim:
   name: RAdam
@@ -16,7 +16,7 @@ Scheduler:
     multiplier: 300
     total_epoch: 10
 
-Dataset: acdc # acdc, prostate, spleen, prostateDK
+Dataset: prostate # acdc, prostate, spleen, prostateDK
 Foreground: all # LV, Myo, RV, all
 
 Data:
@@ -25,15 +25,15 @@ Data:
   seed: 12
 
 DataLoader:
-  labeled_batch_size: 4
-  unlabeled_batch_size: 4
+  labeled_batch_size: 4 # 4
+  unlabeled_batch_size: 4 # 4
   val_batch_size: 6
   shuffle: True
   num_workers: 0
   pin_memory: False
 
 Trainer:
-  name: AE_prior  # Baselines, NaiveVat, co_training, MeanTeacher, constraintReg, consVat, cotconsVAT, MTconsvat, Pseudolike, AE_prior
+  name: consVat  # Baselines, NaiveVat, co_training, MeanTeacher, constraintReg, consVat, cotconsVAT, MTconsvat, Pseudolike, AE_prior
   device: cuda
   save_dir: runs
   num_batches: 200
@@ -62,7 +62,7 @@ VATsettings:
 
 Constraints:
   examples: adv_examples # adv_examples  original_unlab  both
-  Constraint: connectivity  # connectivity, convexity
+  Constraint: symmetry  # connectivity, convexity, symmetry
   num_samples: 5
   reward_type: soft # hard, soft
   reverse_indicator: True # False: FGBG; True: reverse_FGBG

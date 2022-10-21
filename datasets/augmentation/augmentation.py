@@ -6,7 +6,7 @@ from datasets.augmentation.sychronized_augment import SequentialWrapper
 image_transform = pil_augment.Compose(
     [
         pil_augment.RandomCrop((192, 192), fill=(0,)),
-        pil_augment.RandomRotation(degrees=10, resample=PIL.Image.BILINEAR),
+        pil_augment.RandomRotation(degrees=0, resample=PIL.Image.BILINEAR),
         pil_augment.RandomChoice(
             [pil_augment.RandomVerticalFlip(), pil_augment.RandomHorizontalFlip()]
         ),
@@ -16,7 +16,7 @@ image_transform = pil_augment.Compose(
 label_transform = pil_augment.Compose(
     [
         pil_augment.RandomCrop((192, 192), fill=(0,)),
-        pil_augment.RandomRotation(degrees=10, resample=PIL.Image.NEAREST),
+        pil_augment.RandomRotation(degrees=0, resample=PIL.Image.NEAREST),
         pil_augment.RandomChoice(
             [pil_augment.RandomVerticalFlip(), pil_augment.RandomHorizontalFlip()]
         ),
