@@ -81,15 +81,15 @@ def prob_sample(preds: Tensor, reverse_indicator=False, num_samples=10):
 # horizontal symmetry
 def symmetry_error(x: Tensor):
     batch_num = x.shape[0]
-    fg_contour = ContourEstimator(x).to(device)
+    fg_contour = ContourEstimator(x)
     contour_index = torch.where(fg_contour == 1)
     error_list = []
     for i in range(batch_num):
         all_shape = torch.ones_like(fg_contour[i]) * fg_contour[i]
-        sample_contouridx = torch.where(contour_index[0] == torch.Tensor([i]).to(device))
+        sample_contouridx = torch.where(contour_index[0] == i)
         center_position = torch.floor(contour_index[2][sample_contouridx].float().mean())  # center
 
-        yy = 2 * center_position - contour_index[2][min(sample_contouridx[0]):max(sample_contouridx[0]) + 1]
+        yy = (2 * center_position - contour_index[2][min(sample_contouridx[0]):max(sample_contouridx[0]) + 1]).to(device)
         yy = torch.where(yy > 255, torch.Tensor([255.]).to(device), yy)
         all_shape[contour_index[1][sample_contouridx], yy.long()] = 1
         symmetry_error_tmp = all_shape - fg_contour[i]
