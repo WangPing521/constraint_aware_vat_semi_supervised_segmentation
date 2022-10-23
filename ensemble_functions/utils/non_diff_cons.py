@@ -90,8 +90,11 @@ def symmetry_error(x: Tensor):
         center_position = torch.floor(contour_index[2][sample_contouridx].float().mean())  # center
 
         yy = (2 * center_position - contour_index[2][min(sample_contouridx[0]):max(sample_contouridx[0]) + 1]).to(device)
-        yy = torch.where(yy > 255, torch.Tensor([255.]).to(device), yy)
+        yy = torch.where(yy > 191, torch.Tensor([191.]).to(device), yy)
+        yy = torch.where(yy < 0, torch.Tensor([0.]).to(device), yy)
+
         all_shape[contour_index[1][sample_contouridx], yy.long()] = 1
+
         symmetry_error_tmp = all_shape - fg_contour[i]
         symmetry_error = symmetry_error_tmp.sum()
 
