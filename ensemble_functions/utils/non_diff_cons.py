@@ -86,7 +86,7 @@ def symmetry_error(x: Tensor):
     error_list = []
     for i in range(batch_num):
         all_shape = torch.ones_like(fg_contour[i]) * fg_contour[i]
-        sample_contouridx = torch.where(contour_index[0] == i)
+        sample_contouridx = torch.where(contour_index[0] == torch.Tensor([i]).to(device))
         center_position = torch.floor(contour_index[2][sample_contouridx].float().mean())  # center
 
         yy = 2 * center_position - contour_index[2][min(sample_contouridx[0]):max(sample_contouridx[0]) + 1]
