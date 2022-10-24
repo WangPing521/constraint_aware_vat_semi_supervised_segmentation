@@ -88,6 +88,7 @@ def symmetry_error(x: Tensor):
     idx_count_map = map_idx * (1 / map_idx)
     idx_count_map = torch.nan_to_num(idx_count_map)
     center_position = torch.floor(map_idx.sum(dim=(1,2)) / idx_count_map.sum(dim=(1,2)))
+    center_position = torch.nan_to_num(center_position)
     # center_line = [center_position - 25, center_position, center_position + 25]
     symm_shape = torch.zeros_like(idx_count_map) + idx_count_map
 
