@@ -261,7 +261,7 @@ class BaseTrainer(_Trainer):
                 avg_cv_reward = avg_cv_reward + non_convex
 
             if self.constraint == "symmetry":
-                error = symmetry_error(ensemble.max(1)[1])
+                symme_shapes, error_maps, error = symmetry_error(ensemble.max(1)[1])
                 avg_sym_reward = avg_sym_reward + error
 
             avg_cn_reward = avg_cn_reward + non_connect

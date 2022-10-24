@@ -80,73 +80,60 @@ def prob_sample(preds: Tensor, reverse_indicator=False, num_samples=10):
 
 # horizontal symmetry
 def symmetry_error(x: Tensor):
-    batch_num = x.shape[0]
-    fg_contour = ContourEstimator(x)
-    contour_index = torch.where(fg_contour == 1)
-    error_list = []
-    for i in range(batch_num):
-        all_shape = torch.ones_like(fg_contour[i]) * fg_contour[i]
-        sample_contouridx = torch.where(contour_index[0] == i)
-        center_position = torch.floor(contour_index[2][sample_contouridx].float().mean())  # center
+    vector_x = torch.ones(192,1).to(device)
+    vector_y = [torch.Tensor([i]) for i in range(1, 193)]
+    vector_y = torch.stack(vector_y).view(1, 192).to(device)
+    tmp = vector_x * vector_y
+    map_idx = tmp * x
+    idx_count_map = map_idx * (1 / map_idx)
+    idx_count_map = torch.nan_to_num(idx_count_map)
+    center_position = torch.floor(map_idx.sum(dim=(1,2)) / idx_count_map.sum(dim=(1,2)))
+    # center_line = [center_position - 25, center_position, center_position + 25]
+    symm_shape = torch.zeros_like(idx_count_map) + idx_count_map
 
-        yy = (2 * center_position - contour_index[2][min(sample_contouridx[0]):max(sample_contouridx[0]) + 1]).to(device)
-        yy = torch.where(yy > 191, torch.Tensor([191.]).to(device), yy)
-        yy = torch.where(yy < 0, torch.Tensor([0.]).to(device), yy)
+    for i in range(center_position.shape[0]):
+        for cl in range(192):
+            yy = 2 * center_position[i] - cl
+            yy = torch.where(yy > 191, torch.Tensor([191.]).to(device), yy)
+            yy = torch.where(yy < 0, torch.Tensor([0.]).to(device), yy)
+            symm_shape[i,:,int(yy)] = symm_shape[i,:,int(yy)] + idx_count_map[i,:,cl]
 
-        all_shape[contour_index[1][sample_contouridx], yy.long()] = 1
+    symm_shape = torch.where(symm_shape>0, torch.Tensor([1]).to(device), symm_shape)
+    symmetry_error_tmp = symm_shape - x
+    select_center = symmetry_error_tmp.sum()
+    error_rate = select_center / symm_shape.sum()
 
-        symmetry_error_tmp = all_shape - fg_contour[i]
-        symmetry_error = symmetry_error_tmp.sum()
+    return symm_shape, symmetry_error_tmp, error_rate
+    #     tmp = 36864
+    #     if select_center < tmp:
+    #       symmetry_e = symmetry_error_tmp
+    #       tmp = select_center
 
-        error = symmetry_error / all_shape.sum()
-        error_list.append(error)
 
-    symmetry_error = average_list(error_list)
-
-    return symmetry_error
 def symmetry_descriptor(x: Tensor, reward_type='hard'):
-    symmetry_errors_list, fg_contour_list = [], []
-    # x:  all_samples_images
-    for samples_img in x: # sample_list # samples_img: [3,1,256,256]
-        samples_img = samples_img.unsqueeze(1)
-        fg_contour = ContourEstimator(samples_img).to(device)
-        # todo: estimate symetry
-        contour_index = torch.where(fg_contour == 1)
-        num_samples = samples_img.shape[0]
+    b, c, h, w = x.shape
+    hard_rewards = torch.randn(1, c, h, w).to(device)
+    soft_rewards = torch.randn(1, c, h, w).to(device)
+    symm_shapes = torch.randn(1, c, h, w).to(device)
+    for sample in range(b):
+        symm_shape, symm_error_map, val_symme_error = symmetry_error(x[sample])
 
-        for i in range(num_samples):
-            all_shape_tmp = torch.ones_like(fg_contour[i]) * fg_contour[i]
-            sample_contouridx = torch.where(contour_index[0] == i)
-            center_position = torch.floor(contour_index[2][sample_contouridx].float().mean())  # center
+        hard_rewards = torch.cat([hard_rewards, symm_error_map.unsqueeze(0)], dim=0)
+        symm_shapes = torch.cat([symm_shapes, symm_shape.unsqueeze(0)], dim=0)
+        #todo conv / k^2
+        kernel = torch.ones(1, 1, 3, 3)
+        kernel = torch.FloatTensor(kernel).to(device)
+        rewards_soft = F.conv2d(symm_error_map.unsqueeze(0).transpose(1,0).float(), kernel, padding=int((3 - 1) / 2)).transpose(1,0)
+        soft_rewards = torch.cat([soft_rewards, rewards_soft / 9], dim=0)
 
-            # center_line = [center_position-10, center_position-5, center_position-3, center_position, center_position+3, center_position+5, center_position+10]
-            center_line = [center_position-25, center_position, center_position + 25]
-            tmp = 36864
-            symmetry_error = torch.zeros_like(samples_img[i].squeeze(0))
+    hard_rewards = hard_rewards[1:11, :, :, :]
+    soft_rewards = soft_rewards[1:11, :, :, :]
+    symm_shapes = symm_shapes[1:11, :, :, :]
 
-            for center_position_unk in center_line:
-                yy = 2 * center_position_unk - contour_index[2][min(sample_contouridx[0]):max(sample_contouridx[0]) + 1]
-                yy = torch.where(yy > 191, torch.Tensor([191.]).to(device), yy)
-                yy = torch.where(yy < 0, torch.Tensor([0.]).to(device), yy)
-
-                all_shape_tmp[contour_index[1][sample_contouridx], yy.long()] = 1
-                symmetry_error_tmp = all_shape_tmp - fg_contour[i]
-                select_center = symmetry_error_tmp.sum()
-
-                if select_center < tmp:
-                    symmetry_error = symmetry_error_tmp
-                    tmp = select_center
-
-            if i == 0:
-                symmetry_errors = symmetry_error.unsqueeze(0)
-            else:
-                symmetry_errors = torch.cat([symmetry_errors, symmetry_error.unsqueeze(0)], dim=0)
-        symmetry_errors_list.append(symmetry_errors)
-        fg_contour_list.append(fg_contour)
-
-        reward_list = [- fg + error for error, fg in zip(symmetry_errors_list, fg_contour_list)]
-
-    return reward_list
+    if reward_type == 'hard':
+        return hard_rewards, symm_shapes
+    elif reward_type == "soft":
+        return soft_rewards, symm_shapes
 
 # connectivity rewards
 def connectivity_rewards(samples, fg_num, Fscale, Cscale, reward_type='hard', my_connectivity=None, run_state='train'):
@@ -393,35 +380,44 @@ class reinforce_cons_loss(nn.Module):
             C_rewards = convexity_descriptor(samples, reward_type=self._reward_type).transpose(1, 0)
             C_rewards = C_rewards.transpose(1, 0)
         elif self._constraint == "symmetry":
-            C_rewards = symmetry_descriptor(samples, reward_type=self._reward_type)
-            C_rewards = torch.stack(C_rewards)
+            C_rewards, symm_shape = symmetry_descriptor(samples, reward_type=self._reward_type)
 
         assert probs.shape == C_rewards.shape
         #todo: save probs, samples, and rewards(C_rewards)
         assert probs.shape == samples.shape == C_rewards.shape
 
         if mode in ['cat'] and unlab_filename is not None:
-            if cur_batch == 0:
-                # img1
-                C_rewards_tmp = torch.where(C_rewards == 1, torch.Tensor([0]).to(device), C_rewards)
-                reward_plot = - C_rewards_tmp
+            if self._constraint == "symmetry":
+                if cur_batch == 0:
+                    # img1
+                    joint1 = torch.cat([symm_shape[-1][0].unsqueeze(0), probs[-1][0].unsqueeze(0)], 0)
+                    joint1 = joint1.unsqueeze(0)
+                    sample1 = plot_joint_matrix(unlab_filename[-1], joint1)
+                    writer.add_figure(tag=f"train_img1_samples1", figure=sample1, global_step=cur_epoch, close=True)
 
-                joint1 = torch.cat([samples[-1][0].unsqueeze(0), probs[-1][0].unsqueeze(0)], 0)
-                joint1 = joint1.unsqueeze(0)
-                # joint, sample+prob+reward
-                sample1 = plot_joint_matrix(unlab_filename[-1], joint1)
-                rewad_map = plot_seg(reward_plot[-1][0])
-                writer.add_figure(tag=f"train_img1_samples1", figure=sample1, global_step=cur_epoch, close=True)
-                writer.add_figure(tag=f"train_img1_samples1_reward", figure=rewad_map, global_step=cur_epoch, close=True)
+            else:
 
-                #img2
-                joint21 = torch.cat([samples[-2][0].unsqueeze(0), probs[-2][0].unsqueeze(0)], 0)
-                joint21 = joint21.unsqueeze(0)
-                # joint, sample+prob+reward
-                sample21 = plot_joint_matrix(unlab_filename[-2], joint21)
-                rewad_map2 = plot_seg(reward_plot[-2][0])
-                writer.add_figure(tag=f"train_img2_samples", figure=rewad_map2, global_step=cur_epoch, close=True)
-                writer.add_figure(tag=f"train_img2_samples_reward", figure=rewad_map2, global_step=cur_epoch, close=True)
+                if cur_batch == 0:
+                    # img1
+                    C_rewards_tmp = torch.where(C_rewards == 1, torch.Tensor([0]).to(device), C_rewards)
+                    reward_plot = - C_rewards_tmp
+
+                    joint1 = torch.cat([samples[-1][0].unsqueeze(0), probs[-1][0].unsqueeze(0)], 0)
+                    joint1 = joint1.unsqueeze(0)
+                    # joint, sample+prob+reward
+                    sample1 = plot_joint_matrix(unlab_filename[-1], joint1)
+                    rewad_map = plot_seg(reward_plot[-1][0])
+                    writer.add_figure(tag=f"train_img1_samples1", figure=sample1, global_step=cur_epoch, close=True)
+                    writer.add_figure(tag=f"train_img1_samples1_reward", figure=rewad_map, global_step=cur_epoch, close=True)
+
+                    #img2
+                    joint21 = torch.cat([samples[-2][0].unsqueeze(0), probs[-2][0].unsqueeze(0)], 0)
+                    joint21 = joint21.unsqueeze(0)
+                    # joint, sample+prob+reward
+                    sample21 = plot_joint_matrix(unlab_filename[-2], joint21)
+                    rewad_map2 = plot_seg(reward_plot[-2][0])
+                    writer.add_figure(tag=f"train_img2_samples", figure=rewad_map2, global_step=cur_epoch, close=True)
+                    writer.add_figure(tag=f"train_img2_samples_reward", figure=rewad_map2, global_step=cur_epoch, close=True)
 
 
         # avg_reward = ((1 / C_rewards.transpose(1, 0).shape[1]) * C_rewards.transpose(1, 0).sum(dim=1)).unsqueeze(1)

@@ -95,7 +95,7 @@ class ConstraintVATTrainer(BaseTrainer):
         elif self.constraint == "convexity":
             non_con, hull, contour = metric_convexity(pred.max(1)[1])
         elif self.constraint == "symmetry":
-            non_con = symmetry_error(pred.max(1)[1])
+            symm_shape, symmetry_error_tmp, non_con = symmetry_error(pred.max(1)[1])
 
         self._meter_interface[f"train{0}_dice"].add(
             lab_preds.max(1)[1],
