@@ -80,31 +80,41 @@ def prob_sample(preds: Tensor, reverse_indicator=False, num_samples=10):
 
 # horizontal symmetry
 def symmetry_error(x: Tensor):
+    n, c, h, w = x.shape
     vector_x = torch.ones(192,1).to(device)
     vector_y = [torch.Tensor([i]) for i in range(1, 193)]
     vector_y = torch.stack(vector_y).view(1, 192).to(device)
     tmp = vector_x * vector_y
+
     map_idx = tmp * x
     idx_count_map = map_idx * (1 / map_idx)
     idx_count_map = torch.nan_to_num(idx_count_map)
-    center_position = torch.floor(map_idx.sum(dim=(1,2)) / idx_count_map.sum(dim=(1,2)))
+    center_position = torch.floor(map_idx.sum(dim=(2,3)) / idx_count_map.sum(dim=(2,3)))
     center_position = torch.nan_to_num(center_position)
+    center_position = center_position.unsqueeze(2).unsqueeze(3)
+
     # center_line = [center_position - 25, center_position, center_position + 25]
-    symm_shape = torch.zeros_like(idx_count_map) + idx_count_map
+    img_list = []
+    for i in range(n):
+        sample_shape_list = []
+        for j in range(c):
+            c_line = center_position[i][j]
+            pad = nn.ZeroPad2d((int(max(0, w - 2 * c_line)), int(max(0, 2 * c_line - w)), 0, 0))
+            new_tmp = pad(x[i][j])
+            mirror = torch.fliplr(new_tmp) + new_tmp
+            mirror = torch.where(mirror>0, torch.Tensor([1]).to(device), mirror)
+            hh, ww = mirror.shape
+            symm_shape = mirror[:, int(max(0, w - 2 * c_line)) : ww - int(max(0, 2 * c_line - w))]
+            assert h, w == symm_shape.shape
+            sample_shape_list.append(symm_shape)
+        sample_tensor = torch.stack(sample_shape_list)
+        sample_tensor = sample_tensor
+        img_list.append(sample_tensor)
+    all_symm_shape = torch.stack(img_list)
+    symmetry_error_tmp = all_symm_shape - x
+    error_rate = symmetry_error_tmp.mean() / all_symm_shape.mean()
 
-    for i in range(center_position.shape[0]):
-        for cl in range(192):
-            yy = 2 * center_position[i] - cl
-            yy = torch.where(yy > 191, torch.Tensor([191.]).to(device), yy)
-            yy = torch.where(yy < 0, torch.Tensor([0.]).to(device), yy)
-            symm_shape[i,:,int(yy)] = symm_shape[i,:,int(yy)] + idx_count_map[i,:,cl]
-
-    symm_shape = torch.where(symm_shape>0, torch.Tensor([1]).to(device), symm_shape)
-    symmetry_error_tmp = symm_shape - x
-    select_center = symmetry_error_tmp.sum()
-    error_rate = select_center / symm_shape.sum()
-
-    return symm_shape, symmetry_error_tmp, error_rate
+    return all_symm_shape, symmetry_error_tmp, error_rate
     #     tmp = 36864
     #     if select_center < tmp:
     #       symmetry_e = symmetry_error_tmp
@@ -113,23 +123,18 @@ def symmetry_error(x: Tensor):
 
 def symmetry_descriptor(x: Tensor, reward_type='hard'):
     b, c, h, w = x.shape
-    hard_rewards = torch.randn(1, c, h, w).to(device)
-    soft_rewards = torch.randn(1, c, h, w).to(device)
-    symm_shapes = torch.randn(1, c, h, w).to(device)
-    for sample in range(b):
-        symm_shape, symm_error_map, val_symme_error = symmetry_error(x[sample])
+    symm_shapes, symm_error_map, val_symme_error = symmetry_error(x)
+    hard_rewards = symm_error_map
 
-        hard_rewards = torch.cat([hard_rewards, symm_error_map.unsqueeze(0)], dim=0)
-        symm_shapes = torch.cat([symm_shapes, symm_shape.unsqueeze(0)], dim=0)
-        #todo conv / k^2
-        kernel = torch.ones(1, 1, 3, 3)
-        kernel = torch.FloatTensor(kernel).to(device)
-        rewards_soft = F.conv2d(symm_error_map.unsqueeze(0).transpose(1,0).float(), kernel, padding=int((3 - 1) / 2)).transpose(1,0)
-        soft_rewards = torch.cat([soft_rewards, rewards_soft / 9], dim=0)
-
-    hard_rewards = hard_rewards[1:11, :, :, :]
-    soft_rewards = soft_rewards[1:11, :, :, :]
-    symm_shapes = symm_shapes[1:11, :, :, :]
+    #todo conv / k^2
+    kernel = torch.ones(1, 1, 3, 3)
+    kernel = torch.FloatTensor(kernel).to(device)
+    rewards_tmp = []
+    for symm_error in symm_error_map:
+        rewards_soft = F.conv2d(symm_error.unsqueeze(1).float(), kernel, padding=int((3 - 1) / 2)).transpose(1,0)
+        rewards_tmp.append(rewards_soft.squeeze(0))
+    reward_soft_tmp = torch.stack(rewards_tmp)
+    soft_rewards =  reward_soft_tmp / 9
 
     if reward_type == 'hard':
         return hard_rewards, symm_shapes
@@ -391,7 +396,7 @@ class reinforce_cons_loss(nn.Module):
             if self._constraint == "symmetry":
                 if cur_batch == 0:
                     # img1
-                    joint1 = torch.cat([symm_shape[-1][0].unsqueeze(0), probs[-1][0].unsqueeze(0)], 0)
+                    joint1 = torch.cat([symm_shape[-1][0].unsqueeze(0), samples[-1][0].unsqueeze(0)], 0)
                     joint1 = joint1.unsqueeze(0)
                     sample1 = plot_joint_matrix(unlab_filename[-1], joint1)
                     writer.add_figure(tag=f"train_img1_samples1", figure=sample1, global_step=cur_epoch, close=True)
