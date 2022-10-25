@@ -80,7 +80,12 @@ def prob_sample(preds: Tensor, reverse_indicator=False, num_samples=10):
 
 # horizontal symmetry
 def symmetry_error(x: Tensor):
-    n, c, h, w = x.shape
+    try:
+        n, c, h, w = x.shape
+    except:
+        x = x.unsqueeze(0)
+        n, c, h, w = x.shape
+
     vector_x = torch.ones(192,1).to(device)
     vector_y = [torch.Tensor([i]) for i in range(1, 193)]
     vector_y = torch.stack(vector_y).view(1, 192).to(device)
@@ -122,7 +127,6 @@ def symmetry_error(x: Tensor):
 
 
 def symmetry_descriptor(x: Tensor, reward_type='hard'):
-    b, c, h, w = x.shape
     symm_shapes, symm_error_map, val_symme_error = symmetry_error(x)
     hard_rewards = symm_error_map
 
