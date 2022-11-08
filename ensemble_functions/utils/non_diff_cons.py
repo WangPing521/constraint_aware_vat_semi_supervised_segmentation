@@ -188,31 +188,16 @@ def connectivity_rewards(samples, fg_num, Fscale, Cscale, reward_type='hard', my
             else:
                 fill_connect = torch.zeros_like(fg_conn_full).float()
 
+            # fill_connect: connected FG
+            # F_fg_neigbors: the neighbors map of connected FG
+            # fg: the current single FG class, including isolated and main connected FG
+            # S_fg_neigbors: the neighbors map of fg
             if run_state == 'train':
                 F_constraint = F.conv2d(fill_connect, patch_weight, padding=int((Cscale - 1) / 2))
                 F_fg_neigbors = F_constraint * fill_connect
 
-                S_constraint = F.conv2d(fg.unsqueeze(1).float(), patch_weight, padding=int((Cscale - 1) / 2))
-                S_fg_neigbors = S_constraint * fg.unsqueeze(1)
-
-                fc_nonzerobg = torch.where(F_fg_neigbors.float() == 0, torch.Tensor([-1]).to(device),
-                                           F_fg_neigbors.float())
-                sc_nonzerobg = torch.where(S_fg_neigbors.float() == 0, torch.Tensor([-2]).to(device),
-                                           S_fg_neigbors.float())
-
-                x = (fc_nonzerobg == sc_nonzerobg).float().transpose(1, 0)
-
-                S_fg_neigbors1 = torch.where(S_fg_neigbors.float() == 0, torch.Tensor([1]).to(device),
-                                S_fg_neigbors.float())
-                per_c_rewards_tmp = -(F_fg_neigbors / S_fg_neigbors1).transpose(1,0)
-                tmp = torch.where(per_c_rewards_tmp<0, torch.Tensor([1]).to(device), torch.Tensor([0]).to(device))
-                outlier = fg.unsqueeze(0) - x
-                tmp = tmp + outlier
-                tmp = torch.where(tmp==2, torch.Tensor([0]).to(device), torch.Tensor([1]).to(device))
-                if reward_type == 'hard':
-                    per_c_rewards = (fg - x) - x
-                elif reward_type == 'soft':
-                    per_c_rewards = outlier * tmp + per_c_rewards_tmp
+                per_c_rewards = reward_conn(F_fg_neigbors, Cscale, reward_type).transpose(1,0)
+                # per_c_rewards = reward_conn_optimal(F_fg_neigbors, Cscale, reward_type, fg, patch_weight)
 
             else:
                 per_c_rewards = fill_connect
@@ -229,6 +214,40 @@ def connectivity_rewards(samples, fg_num, Fscale, Cscale, reward_type='hard', my
         else:
             C_rewards = torch.cat([C_rewards, C_reward])
     return C_rewards
+
+def reward_conn(F_fg_neigbors, Cscale, reward_type):
+    k = Cscale * Cscale
+    if reward_type == 'hard':
+        per_c_rewards = torch.where(F_fg_neigbors == k, torch.Tensor([1]).to(device), torch.Tensor([0]).to(device))
+    elif reward_type == 'soft':
+        per_c_rewards = F_fg_neigbors / k
+    return per_c_rewards
+
+def reward_conn_optimal(F_fg_neigbors, Cscale, reward_type, fg, patch_weight):
+    S_constraint = F.conv2d(fg.unsqueeze(1).float(), patch_weight, padding=int((Cscale - 1) / 2))
+    S_fg_neigbors = S_constraint * fg.unsqueeze(1)
+
+    fc_nonzerobg = torch.where(F_fg_neigbors.float() == 0, torch.Tensor([-1]).to(device),
+                               F_fg_neigbors.float())  # bg is set to -1
+    sc_nonzerobg = torch.where(S_fg_neigbors.float() == 0, torch.Tensor([-2]).to(device),
+                               S_fg_neigbors.float())  # bg is set to -2
+
+    x = (fc_nonzerobg == sc_nonzerobg).float().transpose(1, 0)
+
+    S_fg_neigbors1 = torch.where(S_fg_neigbors.float() == 0, torch.Tensor([1]).to(device), S_fg_neigbors.float())
+    per_c_rewards_tmp = -(F_fg_neigbors / S_fg_neigbors1).transpose(1, 0)
+    tmp = torch.where(per_c_rewards_tmp < 0, torch.Tensor([1]).to(device), torch.Tensor([0]).to(device))
+    outlier = fg.unsqueeze(0) - x
+    tmp = tmp + outlier
+    tmp = torch.where(tmp == 2, torch.Tensor([0]).to(device), torch.Tensor([1]).to(device))
+
+    if reward_type == 'hard':
+        per_c_rewards = (fg - x) - x
+    elif reward_type == 'soft':
+        per_c_rewards = outlier * tmp + per_c_rewards_tmp
+
+    return per_c_rewards
+
 
 # convexity reward
 def convexity_descriptor(x: Tensor, reward_type='hard'):
@@ -408,32 +427,18 @@ class reinforce_cons_loss(nn.Module):
             else:
 
                 if cur_batch == 0:
-                    # img1
-                    C_rewards_tmp = torch.where(C_rewards == 1, torch.Tensor([0]).to(device), C_rewards)
-                    reward_plot = - C_rewards_tmp
-
-                    joint1 = torch.cat([samples[-1][0].unsqueeze(0), probs[-1][0].unsqueeze(0)], 0)
-                    joint1 = joint1.unsqueeze(0)
-                    # joint, sample+prob+reward
+                    joint1 = samples[-1][0]
                     sample1 = plot_joint_matrix(unlab_filename[-1], joint1)
-                    rewad_map = plot_seg(reward_plot[-1][0])
                     writer.add_figure(tag=f"train_img1_samples1", figure=sample1, global_step=cur_epoch, close=True)
-                    writer.add_figure(tag=f"train_img1_samples1_reward", figure=rewad_map, global_step=cur_epoch, close=True)
 
-                    #img2
-                    joint21 = torch.cat([samples[-2][0].unsqueeze(0), probs[-2][0].unsqueeze(0)], 0)
-                    joint21 = joint21.unsqueeze(0)
-                    # joint, sample+prob+reward
-                    sample21 = plot_joint_matrix(unlab_filename[-2], joint21)
-                    rewad_map2 = plot_seg(reward_plot[-2][0])
-                    writer.add_figure(tag=f"train_img2_samples", figure=rewad_map2, global_step=cur_epoch, close=True)
-                    writer.add_figure(tag=f"train_img2_samples_reward", figure=rewad_map2, global_step=cur_epoch, close=True)
+                    rewad_map = plot_seg(C_rewards[-1][0])
+                    writer.add_figure(tag=f"train_img1_samples1_reward", figure=rewad_map, global_step=cur_epoch, close=True)
 
 
         # avg_reward = ((1 / C_rewards.transpose(1, 0).shape[1]) * C_rewards.transpose(1, 0).sum(dim=1)).unsqueeze(1)
         # avg_reward = 0.5
         # cons_loss = ((C_rewards - avg_reward) * torch.log(probs + 1e-6)).mean()
-        cons_loss = (- C_rewards * torch.log(probs + 1e-6)).mean()
+        cons_loss = (C_rewards * torch.log(probs + 1e-6)).mean()
 
         return cons_loss
 
