@@ -427,7 +427,7 @@ class reinforce_cons_loss(nn.Module):
             else:
 
                 if cur_batch == 0:
-                    joint1 = samples[-1][0]
+                    joint1 = samples[-1][0].unsqueeze(0).unsqueeze(0)
                     sample1 = plot_joint_matrix(unlab_filename[-1], joint1)
                     writer.add_figure(tag=f"train_img1_samples1", figure=sample1, global_step=cur_epoch, close=True)
 
