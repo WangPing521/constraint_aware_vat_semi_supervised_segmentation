@@ -431,8 +431,8 @@ class reinforce_cons_loss(nn.Module):
                     joint1 = samples[-1][0].unsqueeze(0).unsqueeze(0)
                     sample1 = plot_joint_matrix(unlab_filename[-1], joint1)
                     writer.add_figure(tag=f"train_img1_samples1", figure=sample1, global_step=cur_epoch, close=True)
-
-                    rewad_map = plot_seg(C_rewards[-1][0])
+                    reward_vis = torch.where(C_rewards==-1, torch.Tensor([1]).to(device), C_rewards)
+                    rewad_map = plot_seg(reward_vis[-1][0])
                     writer.add_figure(tag=f"train_img1_samples1_reward", figure=rewad_map, global_step=cur_epoch, close=True)
 
 
