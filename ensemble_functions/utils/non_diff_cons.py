@@ -198,7 +198,8 @@ def connectivity_rewards(samples, fg_num, Fscale, Cscale, reward_type='hard', my
 
                 per_c_rewards = reward_conn(F_fg_neigbors, Cscale, reward_type).transpose(1,0)
                 # per_c_rewards = reward_conn_optimal(F_fg_neigbors, Cscale, reward_type, fg, patch_weight)
-
+                isol = -(fg.unsqueeze(1) - fill_connect).transpose(1,0)
+                per_c_rewards = per_c_rewards + isol
             else:
                 per_c_rewards = fill_connect
 
@@ -438,6 +439,7 @@ class reinforce_cons_loss(nn.Module):
         # avg_reward = ((1 / C_rewards.transpose(1, 0).shape[1]) * C_rewards.transpose(1, 0).sum(dim=1)).unsqueeze(1)
         # avg_reward = 0.5
         # cons_loss = ((C_rewards - avg_reward) * torch.log(probs + 1e-6)).mean()
+        C_rewards = torch.where(C_rewards==-1, torch.Tensor([0]).to(device), C_rewards)
         cons_loss = (C_rewards * torch.log(probs + 1e-6)).mean()
 
         return cons_loss
