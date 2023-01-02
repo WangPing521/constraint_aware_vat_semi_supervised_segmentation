@@ -1,6 +1,7 @@
 from datasets.acdc_dataset import ACDCSemiInterface
 from datasets.augmentation.augmentation import train_transform, val_transform
 from datasets.augmentation.resize_augmentation import val_transform_resize, train_transform_resize
+from datasets.hippocampus_dataset import HippocampusSemiInterface
 from datasets.prostate_DK_dataset import ProstateDKSemiInterface
 from datasets.prostate_dataset import ProstateSemiInterface
 from datasets.spleen_dataset import SpleenSemiInterface
@@ -48,6 +49,8 @@ elif config['Dataset'] == 'prostate':
     dataset_handler = ProstateSemiInterface(**config["Data"])
 elif config['Dataset'] == 'prostateDK':
     dataset_handler = ProstateDKSemiInterface(**config["Data"])
+elif config['Dataset'] == 'hippocampus':
+    dataset_handler = HippocampusSemiInterface(**config["Data"])
 
 
 dataset_handler.compile_dataloader_params(**config["DataLoader"])
