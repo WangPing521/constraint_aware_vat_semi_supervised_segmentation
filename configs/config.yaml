@@ -72,6 +72,6 @@ Constraints:
     local_conn_Kernel: 3
 
 Plugin:
-  mode: cat # vat cat
+  mode: vat # vat cat
 
 seed: 1234567
