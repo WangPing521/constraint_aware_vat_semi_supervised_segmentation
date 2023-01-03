@@ -17,8 +17,8 @@ class ConvAE(nn.Module):
         self.conv4 = nn.Conv2d(128, 256, kernel_size=5, stride=2, padding=2)  # 1, 8, 8
         self.bn4 = nn.BatchNorm2d(256)
 
-        self.fc1 = nn.Linear(256 * 24 * 24, latent_num)
-        self.fc2 = nn.Linear(latent_num, 256 * 24 * 24)
+        self.fc1 = nn.Linear(256 * 8 * 8, latent_num) # 256 * 24 * 24
+        self.fc2 = nn.Linear(latent_num, 256 * 8 * 8) # 256 * 24 * 24
 
         self.conv5 = nn.Conv2d(256, 128, kernel_size=5, stride=1, padding=2)
         self.bn5 = nn.BatchNorm2d(128)
@@ -42,7 +42,7 @@ class ConvAE(nn.Module):
         code = self.fc1(x)
 
         x = self.fc2(code)
-        x = x.view(n, 256, 24, 24)
+        x = x.view(n, 256, 8, 8) # 256, 24, 24
 
         x = self.relu(x)
         x = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=True)
