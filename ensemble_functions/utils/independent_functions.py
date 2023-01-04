@@ -298,7 +298,8 @@ def save_images(segs: Tensor, names: Iterable[str], root: Union[str, Path], mode
                 save_path = Path(root, f"iter{iter:03d}", mode, name[4:6], name).with_suffix(".png")
             if name[0:8] == 'prostate':
                 save_path = Path(root, f"iter{iter:03d}", mode, name[9:11], name).with_suffix(".png")
-
+            if name[0:11] == 'hippocampus':
+                save_path = Path(root, f"iter{iter:03d}", mode, name[12:15], name).with_suffix(".png")
             save_path.parent.mkdir(parents=True, exist_ok=True)
 
             imsave(str(save_path), seg.cpu().numpy().astype(np.uint8))

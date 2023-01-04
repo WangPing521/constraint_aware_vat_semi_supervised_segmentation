@@ -343,6 +343,9 @@ class BaseTrainer(_Trainer):
             self.save_checkpoint(self.state_dict(), self.cur_epoch, current_score)
             self._meter_interface.summary().to_csv(self._save_dir / "wholeMeter.csv")
 
+        # checkpoint for save visualization
+        with torch.no_grad():
+            current_score = self.eval_loop(self._val_loader, epoch=99)
 
 
 

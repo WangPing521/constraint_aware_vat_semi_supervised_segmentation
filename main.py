@@ -103,7 +103,7 @@ trainer = trainer_name(
     **config['Trainer']
 )
 
-# trainer.inference(identifier='last.pth')
+trainer.inference(identifier='last.pth')
 trainer.start_training()
 
 # from tqdm import tqdm
@@ -117,8 +117,8 @@ trainer.start_training()
 #             data[1],
 #         )
 #
-#         save_images((image*255).squeeze(1), names=filename, root='prostate', mode='img', iter=0)
-#         save_images(target.squeeze(1), names=filename, root='prostate', mode='gt', iter=0)
+#         save_images((image*255).squeeze(1), names=filename, root='val_Hippocampus', mode='img', iter=0)
+#         save_images(target.squeeze(1), names=filename, root='val_Hippocampus', mode='gt', iter=0)
 #
 # val_img_gt(val_loader)
 
