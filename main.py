@@ -103,7 +103,7 @@ trainer = trainer_name(
     **config['Trainer']
 )
 
-trainer.inference(identifier='last.pth')
+# trainer.inference(identifier='last.pth')
 trainer.start_training()
 
 # from tqdm import tqdm
