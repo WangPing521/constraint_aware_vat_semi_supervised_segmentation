@@ -33,7 +33,7 @@ DataLoader:
   pin_memory: False
 
 Trainer:
-  name: Baselines  # Baselines, NaiveVat, co_training, MeanTeacher, constraintReg, consVat, cotconsVAT, MTconsvat, Pseudolike, AE_prior
+  name: cotconsVAT  # Baselines, NaiveVat, co_training, MeanTeacher, constraintReg, consVat, cotconsVAT, MTconsvat, Pseudolike, AE_prior
   device: cuda
   save_dir: runs
   num_batches: 200
@@ -72,6 +72,6 @@ Constraints:
     local_conn_Kernel: 3
 
 Plugin:
-  mode: vat # vat cat
+  mode: cat # vat cat
 
 seed: 1234567

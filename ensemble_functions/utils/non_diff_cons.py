@@ -436,12 +436,10 @@ class reinforce_cons_loss(nn.Module):
                     writer.add_figure(tag=f"train_img1_samples1_reward", figure=rewad_map, global_step=cur_epoch, close=True)
 
 
-        # avg_reward = ((1 / C_rewards.transpose(1, 0).shape[1]) * C_rewards.transpose(1, 0).sum(dim=1)).unsqueeze(1)
-        # avg_reward = 0.5
-        # cons_loss = ((C_rewards - avg_reward) * torch.log(probs + 1e-6)).mean()
-
+        avg_reward = 0.5
         # C_rewards = torch.where(C_rewards==-1, torch.Tensor([0]).to(device), C_rewards)
-        cons_loss = (C_rewards * torch.log(probs + 1e-6)).mean()
+        # cons_loss = (C_rewards * torch.log(probs + 1e-6)).mean()
+        cons_loss = ((C_rewards - avg_reward) * torch.log(probs + 1e-6)).mean()
 
         return cons_loss
 
